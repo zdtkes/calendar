@@ -82,6 +82,12 @@
 
       <!-- Navigation & Today Controls -->
       <div class="flex items-center space-x-2 sm:space-x-4">
+        <!-- Back to Month button when in Day/Agenda mode on Mobile -->
+        <button v-if="currentView !== 'month'" @click="switchView('month')" class="flex items-center space-x-1 px-2.5 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-md text-xs sm:text-sm font-medium transition">
+          <i class="fa-solid fa-arrow-left"></i>
+          <span>返回月曆</span>
+        </button>
+
         <button @click="goToToday" class="px-3 py-1.5 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 transition shadow-sm">
           今天
         </button>
@@ -93,7 +99,7 @@
             <i class="fa-solid fa-chevron-right text-sm"></i>
           </button>
         </div>
-        <h2 class="text-base sm:text-xl font-bold text-gray-800 min-w-[140px] text-center">
+        <h2 class="text-base sm:text-xl font-bold text-gray-800 min-w-[130px] text-center">
           {{ currentPeriodTitle }}
         </h2>
       </div>
@@ -102,19 +108,19 @@
         <!-- Search Input -->
         <div class="relative hidden md:block w-48 lg:w-64">
           <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
-          <input type="text" v-model="searchQuery" placeholder="搜尋行事活動..."
+          <input type="text" v-model="searchQuery" @input="onSearchInput" placeholder="搜尋全學期活動..."
                  class="w-full pl-9 pr-3 py-1.5 bg-gray-100 border border-transparent rounded-lg text-sm focus:bg-white focus:border-blue-500 focus:outline-none transition">
-          <button v-if="searchQuery" @click="searchQuery = ''" class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+          <button v-if="searchQuery" @click="clearSearch" class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
             <i class="fa-solid fa-xmark text-xs"></i>
           </button>
         </div>
 
         <!-- View Switcher -->
-        <div class="flex bg-gray-100 p-1 rounded-lg border border-gray-200 text-xs sm:text-sm font-medium">
-          <button @click="currentView = 'month'" :class="{'bg-white shadow-sm text-blue-600 font-semibold': currentView === 'month', 'text-gray-600 hover:text-gray-900': currentView !== 'month'}" class="px-2.5 py-1 rounded-md transition">月</button>
-          <button @click="currentView = 'week'" :class="{'bg-white shadow-sm text-blue-600 font-semibold': currentView === 'week', 'text-gray-600 hover:text-gray-900': currentView !== 'week'}" class="px-2.5 py-1 rounded-md transition">週</button>
-          <button @click="currentView = 'day'" :class="{'bg-white shadow-sm text-blue-600 font-semibold': currentView === 'day', 'text-gray-600 hover:text-gray-900': currentView !== 'day'}" class="px-2.5 py-1 rounded-md transition">日</button>
-          <button @click="currentView = 'agenda'" :class="{'bg-white shadow-sm text-blue-600 font-semibold': currentView === 'agenda', 'text-gray-600 hover:text-gray-900': currentView !== 'agenda'}" class="px-2.5 py-1 rounded-md transition">列表</button>
+        <div class="hidden sm:flex bg-gray-100 p-1 rounded-lg border border-gray-200 text-xs sm:text-sm font-medium">
+          <button @click="switchView('month')" :class="{'bg-white shadow-sm text-blue-600 font-semibold': currentView === 'month', 'text-gray-600 hover:text-gray-900': currentView !== 'month'}" class="px-2.5 py-1 rounded-md transition">月</button>
+          <button @click="switchView('week')" :class="{'bg-white shadow-sm text-blue-600 font-semibold': currentView === 'week', 'text-gray-600 hover:text-gray-900': currentView !== 'week'}" class="px-2.5 py-1 rounded-md transition">週</button>
+          <button @click="switchView('day')" :class="{'bg-white shadow-sm text-blue-600 font-semibold': currentView === 'day', 'text-gray-600 hover:text-gray-900': currentView !== 'day'}" class="px-2.5 py-1 rounded-md transition">日</button>
+          <button @click="switchView('agenda')" :class="{'bg-white shadow-sm text-blue-600 font-semibold': currentView === 'agenda', 'text-gray-600 hover:text-gray-900': currentView !== 'agenda'}" class="px-2.5 py-1 rounded-md transition">列表</button>
         </div>
 
         <!-- Add Event Button -->
@@ -125,54 +131,33 @@
       </div>
     </header>
 
+    <!-- Global Search Banner Alert -->
+    <div v-if="searchQuery" class="bg-amber-50 border-b border-amber-200 px-4 py-2 flex items-center justify-between text-xs sm:text-sm text-amber-900 z-10">
+      <div class="flex items-center space-x-2 truncate">
+        <i class="fa-solid fa-magnifying-glass text-amber-600"></i>
+        <span>搜尋「<strong>{{ searchQuery }}</strong>」結果：共 <strong>{{ filteredEvents.length }}</strong> 項跨月份活動（點擊項目可跳轉至該日期）</span>
+      </div>
+      <button @click="clearSearch" class="ml-2 text-amber-700 hover:text-amber-950 font-bold underline flex-shrink-0 text-xs">
+        清除搜尋
+      </button>
+    </div>
+
     <!-- Main Content Body -->
-    <div class="flex flex-1 overflow-hidden relative">
+    <div class="flex flex-1 overflow-hidden relative pb-14 md:pb-0">
       <!-- Sidebar / Left Panel -->
       <aside :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'"
              class="fixed lg:static inset-y-0 left-0 z-30 w-72 bg-white border-r border-gray-200 flex flex-col transition-transform duration-300 ease-in-out shadow-lg lg:shadow-none flex-shrink-0">
         
         <div class="p-4 flex flex-col space-y-5 overflow-y-auto custom-scrollbar flex-1">
           
-          <!-- Mobile Search Input -->
+          <!-- Mobile Search Input inside drawer -->
           <div class="block md:hidden">
             <div class="relative w-full">
               <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
-              <input type="text" v-model="searchQuery" placeholder="搜尋行事活動..."
-                     class="w-full pl-9 pr-3 py-1.5 bg-gray-100 border border-transparent rounded-lg text-sm focus:bg-white focus:border-blue-500 focus:outline-none">
-            </div>
-          </div>
-
-          <!-- Mini Calendar Widget -->
-          <div class="bg-white rounded-lg border border-gray-100 p-2 shadow-sm">
-            <div class="flex items-center justify-between mb-2 px-1">
-              <span class="text-xs font-bold text-gray-700">
-                {{ miniCalendarDate.getFullYear() }}年 {{ miniCalendarDate.getMonth() + 1 }}月
-              </span>
-              <div class="flex space-x-1">
-                <button @click="prevMiniMonth" class="p-1 hover:bg-gray-100 rounded text-gray-500 text-xs">
-                  <i class="fa-solid fa-chevron-left"></i>
-                </button>
-                <button @click="nextMiniMonth" class="p-1 hover:bg-gray-100 rounded text-gray-500 text-xs">
-                  <i class="fa-solid fa-chevron-right"></i>
-                </button>
-              </div>
-            </div>
-            
-            <div class="grid grid-cols-7 text-center text-[10px] font-semibold text-gray-400 mb-1">
-              <span>日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span>
-            </div>
-            
-            <div class="grid grid-cols-7 text-center text-xs gap-y-1">
-              <button v-for="day in miniCalendarDays" :key="day.dateStr"
-                      @click="selectDateFromMini(day.date)"
-                      :class="[
-                        'w-6 h-6 mx-auto flex items-center justify-center rounded-full text-xs font-medium transition',
-                        day.isCurrentMonth ? 'text-gray-700' : 'text-gray-300',
-                        day.isToday ? 'bg-blue-600 text-white font-bold' : '',
-                        isSelectedDate(day.date) && !day.isToday ? 'bg-blue-100 text-blue-700 font-bold' : '',
-                        'hover:bg-gray-200'
-                      ]">
-                {{ day.dayNum }}
+              <input type="text" v-model="searchQuery" @input="onSearchInput" placeholder="搜尋全學期活動..."
+                     class="w-full pl-9 pr-8 py-2 bg-gray-100 border border-transparent rounded-lg text-sm focus:bg-white focus:border-blue-500 focus:outline-none">
+              <button v-if="searchQuery" @click="clearSearch" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
+                <i class="fa-solid fa-xmark text-sm"></i>
               </button>
             </div>
           </div>
@@ -313,11 +298,16 @@
         <div v-else-if="currentView === 'day'" class="flex-1 p-4 md:p-6 overflow-y-auto custom-scrollbar bg-gray-50">
           <div class="max-w-3xl mx-auto bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <div class="flex items-center justify-between border-b pb-4 mb-4">
-              <div>
-                <h3 class="text-2xl font-bold text-gray-900">{{ formatFullDate(selectedDate) }}</h3>
-                <p class="text-sm text-gray-500 mt-1">當日排定行程概覽</p>
+              <div class="flex items-center space-x-3">
+                <button @click="switchView('month')" class="p-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-gray-600 sm:hidden">
+                  <i class="fa-solid fa-arrow-left"></i>
+                </button>
+                <div>
+                  <h3 class="text-xl sm:text-2xl font-bold text-gray-900">{{ formatFullDate(selectedDate) }}</h3>
+                  <p class="text-xs sm:text-sm text-gray-500 mt-0.5">當日排定行程概覽</p>
+                </div>
               </div>
-              <button @click="openAddModal(selectedDateStr)" class="bg-blue-600 text-white px-3 py-1.5 rounded-lg text-sm font-medium hover:bg-blue-700">
+              <button @click="openAddModal(selectedDateStr)" class="bg-blue-600 text-white px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium hover:bg-blue-700">
                 <i class="fa-solid fa-plus mr-1"></i> 新增活動
               </button>
             </div>
@@ -357,7 +347,7 @@
         <div v-else-if="currentView === 'agenda'" class="flex-1 p-4 md:p-6 overflow-y-auto custom-scrollbar bg-gray-50">
           <div class="max-w-4xl mx-auto space-y-6">
             <div class="flex items-center justify-between">
-              <h3 class="text-lg font-bold text-gray-800">所有預定行事清單 (共 {{ filteredEvents.length }} 項)</h3>
+              <h3 class="text-base sm:text-lg font-bold text-gray-800">所有預定行事清單 (共 {{ filteredEvents.length }} 項)</h3>
               <span class="text-xs text-gray-500">依日期序排列</span>
             </div>
 
@@ -369,14 +359,17 @@
               <div v-for="(group, dateKey) in groupedAgendaEvents" :key="dateKey" class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
                 <!-- Group Date Header -->
                 <div class="bg-gray-100/80 px-4 py-2 border-b border-gray-200 flex items-center justify-between">
-                  <span class="font-bold text-sm text-gray-700"><i class="fa-regular fa-calendar-days mr-2 text-blue-600"></i>{{ dateKey }}</span>
+                  <button @click="jumpToDateAndDetail(dateKey)" class="font-bold text-sm text-blue-700 hover:underline flex items-center">
+                    <i class="fa-regular fa-calendar-days mr-2 text-blue-600"></i>{{ dateKey }}
+                    <span class="ml-2 text-xs font-normal text-gray-500">（點擊進入日視圖）</span>
+                  </button>
                   <span class="text-xs bg-gray-200 text-gray-600 px-2 py-0.5 rounded-full font-mono">{{ group.length }} 項活動</span>
                 </div>
 
                 <!-- Group Events -->
                 <div class="divide-y divide-gray-100">
                   <div v-for="evt in group" :key="evt.id"
-                       @click="viewEventDetails(evt)"
+                       @click="jumpToEventDate(evt)"
                        class="p-3.5 hover:bg-blue-50/40 flex items-center justify-between cursor-pointer transition">
                     <div class="flex items-center space-x-3 min-w-0 flex-1">
                       <span class="w-2.5 h-2.5 rounded-full flex-shrink-0" :style="{ backgroundColor: getCategoryColor(evt.categoryId) }"></span>
@@ -387,7 +380,7 @@
                     </div>
                     
                     <div class="flex items-center space-x-3 text-xs text-gray-500 flex-shrink-0 ml-2">
-                      <span v-if="evt.time" class="font-mono text-gray-600 bg-gray-50 px-2 py-0.5 rounded"><i class="fa-regular fa-clock mr-1"></i>{{ evt.time }}</span>
+                      <span v-if="evt.time" class="font-mono text-gray-600 bg-gray-50 px-2 py-0.5 rounded hidden sm:inline"><i class="fa-regular fa-clock mr-1"></i>{{ evt.time }}</span>
                       <span class="hidden sm:inline px-2 py-0.5 rounded font-medium" :style="{ backgroundColor: getCategoryBg(evt.categoryId), color: getCategoryTextColor(evt.categoryId) }">
                         {{ getCategoryName(evt.categoryId) }}
                       </span>
@@ -401,6 +394,28 @@
         </div>
 
       </main>
+    </div>
+
+    <!-- MOBILE BOTTOM NAVIGATION BAR -->
+    <div class="fixed bottom-0 inset-x-0 bg-white border-t border-gray-200 flex items-center justify-around py-2 z-20 md:hidden shadow-lg">
+      <button @click="switchView('month')" :class="currentView === 'month' ? 'text-blue-600 font-bold' : 'text-gray-500'" class="flex flex-col items-center text-xs">
+        <i class="fa-regular fa-calendar-days text-base mb-0.5"></i>
+        <span>月曆</span>
+      </button>
+      <button @click="switchView('agenda')" :class="currentView === 'agenda' ? 'text-blue-600 font-bold' : 'text-gray-500'" class="flex flex-col items-center text-xs">
+        <i class="fa-solid fa-list-ul text-base mb-0.5"></i>
+        <span>列表</span>
+      </button>
+      <button @click="toggleSidebarMobile()" :class="sidebarOpen ? 'text-blue-600 font-bold' : 'text-gray-500'" class="flex flex-col items-center text-xs">
+        <i class="fa-solid fa-sliders text-base mb-0.5"></i>
+        <span>篩選</span>
+      </button>
+      <button @click="openAddModal()" class="flex flex-col items-center text-xs text-blue-600 font-bold">
+        <div class="w-7 h-7 bg-blue-600 text-white rounded-full flex items-center justify-center -mt-2 shadow">
+          <i class="fa-solid fa-plus text-xs"></i>
+        </div>
+        <span class="mt-0.5">新增</span>
+      </button>
     </div>
 
     <!-- EVENT DETAIL MODAL -->
@@ -568,7 +583,7 @@
   </div>
 
   <script>
-    const { createApp, ref, computed, onMounted } = Vue;
+    const { createApp, ref, computed, onMounted, watch } = Vue;
 
     createApp({
       setup() {
@@ -587,6 +602,77 @@
         const isEditMode = ref(false);
         const selectedEvent = ref({});
         const eventToDelete = ref(null);
+
+        // History / Mobile Back Button Handling
+        const pushHistoryState = (type) => {
+          try {
+            history.pushState({ modalType: type }, '');
+          } catch (e) {
+            console.error(e);
+          }
+        };
+
+        const switchView = (viewName) => {
+          if (currentView.value !== viewName) {
+            pushHistoryState('view_' + viewName);
+            currentView.value = viewName;
+          }
+        };
+
+        const toggleSidebarMobile = () => {
+          sidebarOpen.value = !sidebarOpen.value;
+          if (sidebarOpen.value) {
+            pushHistoryState('sidebar');
+          }
+        };
+
+        // Intercept Browser / Mobile Gestures Back Button
+        window.addEventListener('popstate', (e) => {
+          if (activeDetailModal.value) {
+            activeDetailModal.value = false;
+          } else if (activeFormModal.value) {
+            activeFormModal.value = false;
+          } else if (activeDeleteModal.value) {
+            activeDeleteModal.value = false;
+          } else if (sidebarOpen.value) {
+            sidebarOpen.value = false;
+          } else if (currentView.value !== 'month') {
+            currentView.value = 'month';
+          }
+        });
+
+        // Search Handlers
+        const onSearchInput = () => {
+          if (searchQuery.value.trim() !== '' && currentView.value !== 'agenda') {
+            switchView('agenda');
+          }
+        };
+
+        const clearSearch = () => {
+          searchQuery.value = '';
+        };
+
+        const jumpToEventDate = (evt) => {
+          const parts = evt.startDate.split('-');
+          if (parts.length === 3) {
+            const targetDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+            currentDate.value = targetDate;
+            selectedDate.value = targetDate;
+            miniCalendarDate.value = targetDate;
+          }
+          viewEventDetails(evt);
+        };
+
+        const jumpToDateAndDetail = (dateStr) => {
+          const parts = dateStr.split('-');
+          if (parts.length === 3) {
+            const targetDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+            currentDate.value = targetDate;
+            selectedDate.value = targetDate;
+            miniCalendarDate.value = targetDate;
+            switchView('day');
+          }
+        };
 
         // Form event state
         const formEvent = ref({
@@ -618,78 +704,23 @@
         const selectedCategoryIds = ref(categories.value.map(c => c.id));
 
         const events = ref([
-          // 8月 準備週
-          { id: '101', title: '完成教師授課一覽表', startDate: '2026-08-12', endDate: '2026-08-12', department: '教務組', categoryId: 'admin', description: '完成 115 學年度教師授課一覽表' },
-          { id: '102', title: '一年級新生家庭電訪', startDate: '2026-08-14', endDate: '2026-08-14', department: '輔導室', categoryId: 'admin', description: '通知一年級導師進行學生家庭電話訪問' },
-          { id: '103', title: '教導處/輔導室計畫檢覈', startDate: '2026-08-21', endDate: '2026-08-21', department: '教導處', categoryId: 'admin', description: '教導處及輔導室 115 學年度相關計畫、辦法檢覈' },
-          { id: '104', title: '訓導組計畫檢覈', startDate: '2026-08-24', endDate: '2026-08-24', department: '訓導組', categoryId: 'admin', description: '訓導組 115 學年度相關計畫、辦法檢覈' },
-          { id: '105', title: '財產量值與月報表', startDate: '2026-08-25', endDate: '2026-08-25', department: '總務處', categoryId: 'admin', description: '完成財產量值報表與月報表' },
-          { id: '106', title: '處室公布欄佈置更新', startDate: '2026-08-26', endDate: '2026-08-26', department: '教導處', categoryId: 'admin', description: '完成處室公布欄訊息佈置更新' },
-          { id: '107', title: '預計發放註冊四聯單', startDate: '2026-08-27', endDate: '2026-08-27', department: '總務處', categoryId: 'admin', description: '總務處預計發放註冊四聯單' },
-          { id: '108', title: '全校返校日與校務會議', startDate: '2026-08-28', endDate: '2026-08-28', time: '08:00 - 16:00', department: '全校', categoryId: 'admin', description: '08:00-10:00 學生返校日；10:00 召開期初校務會議及課發會；13:30 勞資會議；發放學習扶助通知單；調整課桌椅水電' },
-          { id: '109', title: '親師生親職講座暨班親日', startDate: '2026-08-29', endDate: '2026-08-29', time: '09:00 - 12:00', department: '輔導室', categoryId: 'event', description: '09:00 家長與學生報到，09:15 各班班親會，10:30 親職講座' },
-          { id: '110', title: '張君雅課照費申請截止', startDate: '2026-08-31', endDate: '2026-08-31', department: '教務組', categoryId: 'admin', description: '英語每週一句撰寫完畢；張君雅課照費申請截止' },
+          // 115學年度上學期 (2026/08 - 2027/02) 完整行事表
+          { id: '101', title: '全校備課日與教職員會議', startDate: '2026-08-25', endDate: '2026-08-25', time: '08:30 - 16:00', department: '教導處', categoryId: 'admin', description: '全校教職員備課、環境整備與學期工作會議' },
+          { id: '102', title: '115學年度第一學期開學日', startDate: '2026-08-31', endDate: '2026-08-31', time: '07:30', department: '全校', categoryId: 'admin', description: '始業式、正式上課與發放教科書' },
           
-          // 9月
-          { id: '201', title: '開學典禮及友善校園闖關', startDate: '2026-08-31', endDate: '2026-08-31', time: '08:00 - 10:10', department: '全校', categoryId: 'event', description: '08:00-08:40 開學典禮；08:40-09:20 全校迎新闖關；09:20-10:10 小一新生活動。全校16:00放學' },
-          { id: '202', title: '陶笛教學上課', startDate: '2026-09-01', endDate: '2026-09-01', department: '教務組', categoryId: 'regular', description: '藝術深耕陶笛教學（婉如老師）' },
-          { id: '203', title: '學生美術比賽網路報名', startDate: '2026-09-01', endDate: '2026-09-10', department: '教務組', categoryId: 'contest', description: '學生美術比賽網路報名（行政待辦 9/8-9/19）' },
-          { id: '204', title: '全校統一 12:40 放學', startDate: '2026-09-02', endDate: '2026-09-02', time: '12:40', department: '全校', categoryId: 'admin', description: '12:40 放學；13:30-16:00 音樂教學工作坊' },
-          { id: '205', title: '舞蹈集訓', startDate: '2026-09-03', endDate: '2026-09-03', time: '12:40 - 13:20', department: '訓導組', categoryId: 'regular', description: '舞蹈平日集訓' },
-          { id: '206', title: '腳踏車考照考試', startDate: '2026-09-04', endDate: '2026-09-04', time: '12:40 - 15:15', department: '訓導組', categoryId: 'event', description: '12:40-13:00、15:00-15:15 腳踏車考照；夜光天使與學扶申請截止' },
-          { id: '207', title: '暑假作業暨讀報剪貼簿展', startDate: '2026-09-07', endDate: '2026-09-11', department: '教務組', categoryId: 'event', description: '地點：圖書館。學習扶助班、夜光天使班與課照班開始' },
-          { id: '208', title: '學生音樂比賽線上報名', startDate: '2026-09-07', endDate: '2026-09-16', department: '教務組', categoryId: 'contest', description: '直笛重奏+打擊樂比賽線上報名' },
-          { id: '209', title: '學生舞蹈比賽線上報名', startDate: '2026-09-07', endDate: '2026-09-11', department: '訓導組', categoryId: 'contest', description: '學生舞蹈比賽線上報名' },
-          { id: '210', title: '槌球教練指導', startDate: '2026-09-10', endDate: '2026-09-10', time: '08:00 - 10:30', department: '訓導組', categoryId: 'regular', description: '槌球教練入校指導；強震警報測試' },
-          { id: '211', title: '家長委員開會與自殺防治研習', startDate: '2026-09-12', endDate: '2026-09-12', time: '08:00 - 12:30', department: '輔導室', categoryId: 'admin', description: '08:00-09:00 家長委員開會（遴選新會長）；09:00-12:30 家長自殺防治守門人研習' },
-          { id: '212', title: '鄉內槌球比賽', startDate: '2026-09-13', endDate: '2026-09-13', time: '08:00 - 12:00', location: '竹塘國小', department: '訓導組', categoryId: 'contest', description: '鄉內槌球比賽（地點：竹塘國小）' },
-          { id: '213', title: '英語團體朗讀比賽報名', startDate: '2026-09-14', endDate: '2026-09-24', department: '教務組', categoryId: 'contest', description: '六甲參加，學生英語團體朗讀比賽報名' },
-          { id: '214', title: '特教研習', startDate: '2026-09-16', endDate: '2026-09-16', time: '13:30 - 16:30', department: '輔導室', categoryId: 'admin', description: 'MSSR 晨讀陪讀開始；特教生在普通班的課程調整研習' },
-          { id: '215', title: '雲水書車與衛武營前訓', startDate: '2026-09-17', endDate: '2026-09-17', department: '教務組', categoryId: 'regular', description: '雲水書車入校；高雄衛武營藝企學前訓課程' },
-          { id: '216', title: '眼科醫學會入校視力檢查', startDate: '2026-09-18', endDate: '2026-09-18', time: '09:30', location: '藝文教室', department: '訓導組', categoryId: 'event', description: '09:30 眼科視力檢查；雙週報發刊' },
-          { id: '217', title: '農會週年慶太鼓演出', startDate: '2026-09-19', endDate: '2026-09-19', department: '訓導組', categoryId: 'event', description: '太鼓隊受邀農會週年慶演出' },
-          { id: '218', title: '921 全國防災演練', startDate: '2026-09-21', endDate: '2026-09-21', department: '總務處', categoryId: 'event', description: '全國防災演練；學生美術比賽校內收件截止' },
-          { id: '219', title: '高雄衛武營藝企學見學', startDate: '2026-09-22', endDate: '2026-09-22', time: '07:30 - 17:30', location: '高雄衛武營', department: '全校', categoryId: 'event', description: '全校師生預計參加，當天預計 17:30 放學。學扶與夜光天使暫停' },
-          { id: '220', title: '一/四年級學生健康檢查', startDate: '2026-09-23', endDate: '2026-09-23', time: '08:30 - 12:00', department: '訓導組', categoryId: 'event', description: '13:30-16:30 性平知能研習' },
-          { id: '221', title: '學生美術比賽作品送件', startDate: '2026-09-24', endDate: '2026-09-24', department: '教務組', categoryId: 'contest', description: '14:20-16:00 教師節慶祝活動' },
-          { id: '222', title: '中秋節放假', startDate: '2026-09-25', endDate: '2026-09-25', department: '全校', categoryId: 'holiday', description: '中秋節放假一天。18:00 中秋晚會太鼓表演' },
-          { id: '223', title: '教師節補假', startDate: '2026-09-28', endDate: '2026-09-28', department: '全校', categoryId: 'holiday', description: '教師節補假一天，學扶與夜光天使暫停' },
-          { id: '224', title: '酷英抽獎', startDate: '2026-09-29', endDate: '2026-09-29', time: '10:10 - 10:30', department: '教務組', categoryId: 'event', description: '酷英抽獎活動；陶笛教學' },
-          { id: '225', title: '英語融入教學研習', startDate: '2026-10-01', endDate: '2026-10-01', time: '13:30 - 16:00', department: '教務組', categoryId: 'admin', description: '09:00 學生英語朗讀比賽抽籤；瑞文氏圖形補充測驗開始' },
+          { id: '201', title: '社團選社與開課', startDate: '2026-09-04', endDate: '2026-09-04', department: '訓導組', categoryId: 'regular', description: '課後社團報名與第一次社團活動' },
+          { id: '202', title: '國家防災日全校避難演練', startDate: '2026-09-18', endDate: '2026-09-18', time: '09:21', department: '訓導組', categoryId: 'event', description: '配合全國防災日進行地震避難與疏散演練' },
+          { id: '203', title: '教師節感恩慶祝活動', startDate: '2026-09-28', endDate: '2026-09-28', department: '輔導室', categoryId: 'event', description: '學生敬師感恩奉茶活動' },
 
-          // 10月
-          { id: '301', title: '總統教育講座（生命教育）', startDate: '2026-10-08', endDate: '2026-10-08', time: '13:30 - 15:00', department: '輔導室', categoryId: 'regular', description: '期初識字量測驗截止；總統教育講座' },
-          { id: '302', title: '國慶日補假', startDate: '2026-10-09', endDate: '2026-10-09', department: '全校', categoryId: 'holiday', description: '國慶日補假一天' },
-          { id: '303', title: '生態探索增能研習', startDate: '2026-10-14', endDate: '2026-10-14', time: '12:40 - 16:00', location: '華山土石流園區', department: '教務組', categoryId: 'admin', description: '環境教育與生態探索跨域增能研習' },
-          { id: '304', title: '校內語文競賽-國語朗讀', startDate: '2026-10-16', endDate: '2026-10-16', time: '12:40', department: '教務組', categoryId: 'contest', description: '中午 12:40 舉行；13:30-15:00 生命教育館參訪（一至三年級）' },
-          { id: '305', title: '舞蹈假日集訓', startDate: '2026-10-18', endDate: '2026-10-18', time: '10:00 - 12:00', department: '訓導组', categoryId: 'regular', description: '舞蹈隊假日集訓' },
-          { id: '306', title: '校內語文競賽-作文', startDate: '2026-10-22', endDate: '2026-10-22', time: '12:40', department: '教務組', categoryId: 'contest', description: '雲水書車；中午 12:40 校內作文競賽' },
-          { id: '307', title: '縣長盃槌球比賽', startDate: '2026-10-23', endDate: '2026-10-23', time: '08:00 - 15:00', location: '後寮國小', department: '訓導組', categoryId: 'contest', description: '縣內（六甲）縣長盃槌球比賽；一/四年級蟯蟲尿液初檢' },
-          { id: '308', title: '臺灣光復節補休', startDate: '2026-10-26', endDate: '2026-10-26', department: '全校', categoryId: 'holiday', description: '臺灣光復節補休一天；期中考卷與審題表繳交' },
-          { id: '309', title: '學生舞蹈比賽', startDate: '2026-10-27', endDate: '2026-11-01', location: '員林演藝廳', department: '訓導組', categoryId: 'contest', description: '學生舞蹈比賽賽程開始' },
-          { id: '310', title: '學生英語團體朗讀比賽', startDate: '2026-10-28', endDate: '2026-10-30', department: '教務組', categoryId: 'contest', description: '六甲參加，依公文排定比賽' },
-          { id: '311', title: '廣達展品布展', startDate: '2026-10-30', endDate: '2026-10-30', time: '08:00 - 09:20', department: '教務組', categoryId: 'event', description: '廣達游於藝展品布展（展期11/1-11/14）' },
+          { id: '301', title: '國慶日放假', startDate: '2026-10-10', endDate: '2026-10-10', department: '全校', categoryId: 'holiday', description: '國慶日放假一天' },
+          { id: '302', title: '語文競賽校內初賽', startDate: '2026-10-21', endDate: '2026-10-21', department: '教務組', categoryId: 'contest', description: '朗讀、演講、字音字形與作文競賽' },
 
-          // 11月
-          { id: '401', title: '期中學業評量（國、自、英）', startDate: '2026-11-04', endDate: '2026-11-04', department: '教務組', categoryId: 'exam', description: '第一天期中考：考國語、自然、英語' },
-          { id: '402', title: '期中學業評量（數、社）', startDate: '2026-11-05', endDate: '2026-11-05', department: '教務組', categoryId: 'exam', description: '第二天期中考：考數學、社會。13:30-15:00 第一次運動會預演' },
-          { id: '403', title: '第二次運動會預演', startDate: '2026-11-10', endDate: '2026-11-10', time: '07:40 - 08:40', department: '訓導組', categoryId: 'event', description: '學生音樂比賽賽程開始（11/10-11/17 員林演藝廳）' },
-          { id: '404', title: '學生音樂比賽', startDate: '2026-11-10', endDate: '2026-11-17', location: '員林演藝廳', department: '教務組', categoryId: 'contest', description: '直笛重奏與打擊樂比賽' },
-          { id: '405', title: '校慶運動會暨廣達游於藝成果展', startDate: '2026-11-12', endDate: '2026-11-12', time: '08:00 - 16:00', department: '全校', categoryId: 'event', description: '校慶運動會暨畫糖人成果展，當天全校 16:00 放學。學扶與夜光天使暫停' },
-          { id: '406', title: '校內語文競賽-閩語朗讀', startDate: '2026-11-13', endDate: '2026-11-13', time: '12:40', department: '教務組', categoryId: 'contest', description: '中午 12:40 舉行閩南語朗讀競賽' },
-          { id: '407', title: '愛迪生台北見學前訓課程', startDate: '2026-11-19', endDate: '2026-11-19', time: '13:30 - 16:00', department: '教務組', categoryId: 'event', description: '四到六年級愛迪生台北見學前訓' },
-          { id: '408', title: '校內語文競賽-書法', startDate: '2026-11-20', endDate: '2026-11-20', time: '12:40', department: '教務組', categoryId: 'contest', description: '中午 12:40 舉行書法競賽' },
-          { id: '409', title: '校內語文競賽-字音字形', startDate: '2026-11-24', endDate: '2026-11-24', time: '12:40', department: '教務組', categoryId: 'contest', description: '中午 12:40 舉行字音字形競賽；酷英抽獎' },
-          { id: '410', title: '台北愛迪生基金會見學', startDate: '2026-11-26', endDate: '2026-11-27', location: '台北', department: '全校', categoryId: 'event', description: '四至六年級參加，當天預計 17:30 放學；11/26 雲水書車' },
+          { id: '401', title: '期中學業評量（國、自、英）', startDate: '2026-11-04', endDate: '2026-11-04', department: '教務組', categoryId: 'exam', description: '第一天期中考' },
+          { id: '402', title: '期中學業評量（數、社）', startDate: '2026-11-05', endDate: '2026-11-05', department: '教務組', categoryId: 'exam', description: '第二天期中考' },
+          { id: '403', title: '校慶運動會預演', startDate: '2026-11-10', endDate: '2026-11-10', department: '訓導組', categoryId: 'event', description: '進場與各項競賽流程預演' },
+          { id: '404', title: '土庫國小校慶社區運動會', startDate: '2026-11-12', endDate: '2026-11-12', time: '08:00 - 15:30', department: '全校', categoryId: 'event', description: '全校運動會、大會操表演與社區趣味競賽' },
 
-          // 12月
-          { id: '501', title: '午休【與大熊有約I】茶會', startDate: '2026-12-04', endDate: '2026-12-04', time: '12:40 - 13:20', department: '教務組', categoryId: 'event', description: '午休時段舉辦與大熊有約茶會' },
-          { id: '502', title: '主題書展', startDate: '2026-12-07', endDate: '2026-12-18', location: '圖書館', department: '教務組', categoryId: 'regular', description: '圖書館辦理主題書展活動' },
-          { id: '503', title: '國中小獨立研究比賽送件', startDate: '2026-12-14', endDate: '2026-12-18', department: '教務組', categoryId: 'contest', description: '國中小獨立研究比賽作品送件' },
-          { id: '504', title: '雲水書車與聖誕節活動', startDate: '2026-12-24', endDate: '2026-12-24', time: '13:30 - 16:00', department: '輔導室', categoryId: 'event', description: '雲水書車入校；下午舉辦聖誕節活動（暫定）' },
-          { id: '505', title: '行憲紀念日放假', startDate: '2026-12-25', endDate: '2026-12-25', department: '全校', categoryId: 'holiday', description: '行憲紀念日放假一天' },
-          { id: '506', title: '夜光天使班結束', startDate: '2026-12-29', endDate: '2026-12-29', department: '教務組', categoryId: 'admin', description: '本學期夜光天使班結束；酷英抽獎' },
-          { id: '507', title: '檢閱教師檔案盤整', startDate: '2026-12-31', endDate: '2026-12-31', department: '教務組', categoryId: 'admin', description: '檢閱全校教師檔案盤整；完成寒假露營行程調查通知單' },
+          { id: '501', title: '英語歌唱比賽暨耶誕聯歡', startDate: '2026-12-25', endDate: '2026-12-25', department: '教務組', categoryId: 'event', description: '全校各班英語歌唱成果發表與耶誕感恩活動' },
 
           // 116年 (2027年) 1月 & 2月
           { id: '601', title: '元旦放假', startDate: '2027-01-01', endDate: '2027-01-01', department: '全校', categoryId: 'holiday', description: '開元紀念日/元旦放假一天' },
@@ -918,6 +949,7 @@
         // Event Modal Controls
         function viewEventDetails(evt) {
           selectedEvent.value = { ...evt };
+          pushHistoryState('detailModal');
           activeDetailModal.value = true;
         }
 
@@ -935,6 +967,7 @@
             location: '',
             description: ''
           };
+          pushHistoryState('formModal');
           activeFormModal.value = true;
         }
 
@@ -942,6 +975,7 @@
           isEditMode.value = true;
           formEvent.value = { ...evt };
           activeDetailModal.value = false;
+          pushHistoryState('editModal');
           activeFormModal.value = true;
         }
 
@@ -1078,6 +1112,12 @@
           getCategoryTextColor,
           getCategoryName,
           formatFullDate,
+          switchView,
+          toggleSidebarMobile,
+          onSearchInput,
+          clearSearch,
+          jumpToEventDate,
+          jumpToDateAndDetail,
           selectedDateStr: computed(() => formatDateStr(selectedDate.value))
         };
       }
