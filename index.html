@@ -135,6 +135,12 @@
           <button @click="switchView('agenda')" :class="{'bg-white shadow-sm text-blue-600 font-semibold': currentView === 'agenda', 'text-gray-600 hover:text-gray-900': currentView !== 'agenda'}" class="px-2.5 py-1 rounded-md transition">列表</button>
         </div>
 
+        <!-- Admin Status / Unlock Button -->
+        <button @click="toggleAdminAuth" :class="isAdmin ? 'bg-amber-100 text-amber-800 border-amber-300' : 'bg-gray-100 text-gray-600 border-gray-300 hover:bg-gray-200'" class="flex items-center space-x-1 px-2.5 py-1.5 border rounded-lg text-xs font-medium transition">
+          <i class="fa-solid" :class="isAdmin ? 'fa-lock-open text-amber-600' : 'fa-lock'"></i>
+          <span class="hidden sm:inline">{{ isAdmin ? '管理員已驗證' : '管理員登入' }}</span>
+        </button>
+
         <!-- Add Event Button -->
         <button @click="openAddModal()" class="flex items-center space-x-1 bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg shadow font-medium text-sm transition">
           <i class="fa-solid fa-plus text-xs"></i>
@@ -607,6 +613,36 @@
       </div>
     </div>
 
+    <!-- PASSWORD VERIFICATION MODAL -->
+    <div v-if="adminPasswordModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/50 backdrop-blur-xs">
+      <div class="bg-white rounded-xl shadow-2xl w-full max-w-sm overflow-hidden border border-gray-100">
+        <div class="bg-amber-600 px-5 py-3 flex items-center justify-between text-white">
+          <h3 class="font-bold text-sm flex items-center">
+            <i class="fa-solid fa-shield-halved mr-2"></i>管理員身分驗證
+          </h3>
+          <button @click="adminPasswordModal = false" class="text-white hover:opacity-80">
+            <i class="fa-solid fa-xmark text-base"></i>
+          </button>
+        </div>
+        <form @submit.prevent="verifyPassword" class="p-5 space-y-4">
+          <p class="text-xs text-gray-600">此操作需要管理員權限，請輸入管理密碼以繼續：</p>
+          <div>
+            <input type="password" v-model="inputPassword" ref="passwordInput" placeholder="請輸入管理密碼" autofocus required
+                   class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-center tracking-widest font-mono focus:ring-2 focus:ring-amber-500 focus:outline-none">
+            <p v-if="passwordError" class="text-xs text-red-500 mt-1 font-semibold text-center">{{ passwordError }}</p>
+          </div>
+          <div class="flex justify-end space-x-2 pt-1">
+            <button type="button" @click="adminPasswordModal = false" class="px-3 py-1.5 border border-gray-300 rounded-lg text-xs font-medium text-gray-600 hover:bg-gray-50">
+              取消
+            </button>
+            <button type="submit" class="px-4 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-xs font-bold shadow">
+              驗證並繼續
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
   </div>
 
   <script type="module">
@@ -640,6 +676,47 @@
         const isEditMode = ref(false);
         const selectedEvent = ref({});
         const eventToDelete = ref(null);
+
+        // Admin Auth State & Management Password (2140)
+        const isAdmin = ref(false);
+        const adminPasswordModal = ref(false);
+        const inputPassword = ref('');
+        const passwordError = ref('');
+        let pendingAdminAction = null;
+
+        const requireAdmin = (actionCallback) => {
+          if (isAdmin.value) {
+            actionCallback();
+          } else {
+            pendingAdminAction = actionCallback;
+            inputPassword.value = '';
+            passwordError.value = '';
+            adminPasswordModal.value = true;
+          }
+        };
+
+        const verifyPassword = () => {
+          if (inputPassword.value === '2140') {
+            isAdmin.value = true;
+            adminPasswordModal.value = false;
+            passwordError.value = '';
+            if (pendingAdminAction) {
+              const callback = pendingAdminAction;
+              pendingAdminAction = null;
+              callback();
+            }
+          } else {
+            passwordError.value = '密碼錯誤！請重新輸入';
+          }
+        };
+
+        const toggleAdminAuth = () => {
+          if (isAdmin.value) {
+            isAdmin.value = false;
+          } else {
+            requireAdmin(() => {});
+          }
+        };
 
         const defaultEvents = [
           // 115學年度上學期 (2026/08 - 2027/02) 完整行事表
@@ -745,9 +822,11 @@
         };
 
         const resetToDefaultData = async () => {
-          if (confirm('確定要將雲端行事曆恢復為預設學期行程嗎？目前自訂的新增修改將被重置。')) {
-            await seedInitialData();
-          }
+          requireAdmin(async () => {
+            if (confirm('確定要將雲端行事曆恢復為預設學期行程嗎？目前自訂的新增修改將被重置。')) {
+              await seedInitialData();
+            }
+          });
         };
 
         // History / Mobile Back Button Handling
@@ -1119,21 +1198,41 @@
         }
 
         function openAddModal(defaultDateStr = null) {
-          isEditMode.value = false;
-          const targetDate = defaultDateStr || formatDateStr(selectedDate.value);
-          formEvent.value = {
-            id: 'evt_' + Date.now(),
-            title: '',
-            startDate: targetDate,
-            endDate: targetDate,
-            time: '',
-            department: '教導處',
-            categoryId: 'event',
-            location: '',
-            description: ''
-          };
-          pushHistoryState('formModal');
-          activeFormModal.value = true;
+          requireAdmin(() => {
+            isEditMode.value = false;
+            const targetDate = defaultDateStr || formatDateStr(selectedDate.value);
+            formEvent.value = {
+              id: 'evt_' + Date.now(),
+              title: '',
+              startDate: targetDate,
+              endDate: targetDate,
+              time: '',
+              department: '教導處',
+              categoryId: 'event',
+              location: '',
+              description: ''
+            };
+            pushHistoryState('formModal');
+            activeFormModal.value = true;
+          });
+        }
+
+        function openEditModal(evt) {
+          requireAdmin(() => {
+            isEditMode.value = true;
+            formEvent.value = { ...evt };
+            activeDetailModal.value = false;
+            pushHistoryState('editModal');
+            activeFormModal.value = true;
+          });
+        }
+
+        function confirmDelete(evt) {
+          requireAdmin(() => {
+            eventToDelete.value = evt;
+            activeDetailModal.value = false;
+            activeDeleteModal.value = true;
+          });
         }
 
         function openEditModal(evt) {
@@ -1218,6 +1317,12 @@
           searchQuery,
           syncStatus,
           currentUserId,
+          isAdmin,
+          adminPasswordModal,
+          inputPassword,
+          passwordError,
+          verifyPassword,
+          toggleAdminAuth,
           resetToDefaultData,
           activeDetailModal,
           activeFormModal,
