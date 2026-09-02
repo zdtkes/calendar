@@ -115,6 +115,18 @@
           </button>
         </div>
 
+        <!-- Cloud Sync Status Badge -->
+        <div class="hidden lg:flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 border border-gray-200">
+          <span class="w-2 h-2 rounded-full" :class="{
+            'bg-green-500 animate-pulse': syncStatus === 'synced',
+            'bg-amber-500 animate-spin': syncStatus === 'syncing',
+            'bg-red-500': syncStatus === 'error' || syncStatus === 'offline'
+          }"></span>
+          <span class="text-gray-600">
+            {{ syncStatus === 'synced' ? '雲端同步中' : (syncStatus === 'syncing' ? '同步處理中...' : '離線模式') }}
+          </span>
+        </div>
+
         <!-- View Switcher -->
         <div class="hidden sm:flex bg-gray-100 p-1 rounded-lg border border-gray-200 text-xs sm:text-sm font-medium">
           <button @click="switchView('month')" :class="{'bg-white shadow-sm text-blue-600 font-semibold': currentView === 'month', 'text-gray-600 hover:text-gray-900': currentView !== 'month'}" class="px-2.5 py-1 rounded-md transition">月</button>
@@ -203,6 +215,21 @@
             <p><strong class="text-blue-950">期末評量：</strong>116/01/13 - 01/14</p>
             <p><strong class="text-blue-950">休業式典禮：</strong>116/01/19</p>
             <p><strong class="text-blue-950">寒假戶外露營：</strong>116/01/26 - 01/27</p>
+          </div>
+
+          <!-- Cloud Synchronization Info & Data Control -->
+          <div class="border-t border-gray-200 pt-3 mt-2 text-xs space-y-2 text-gray-500">
+            <div class="flex items-center justify-between">
+              <span class="font-bold text-gray-600"><i class="fa-solid fa-cloud-arrow-up mr-1 text-blue-600"></i>雲端同步狀態</span>
+              <span class="px-1.5 py-0.5 rounded text-[10px]" :class="syncStatus === 'synced' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'">
+                {{ syncStatus === 'synced' ? '連線正常' : '連線中' }}
+              </span>
+            </div>
+            <p v-if="currentUserId" class="text-[10px] font-mono truncate text-gray-400">裝置識別: {{ currentUserId }}</p>
+            <button @click="resetToDefaultData" class="w-full py-1.5 px-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded text-xs transition flex items-center justify-center space-x-1">
+              <i class="fa-solid fa-rotate-left"></i>
+              <span>重新匯入預設預排行程</span>
+            </button>
           </div>
 
         </div>
@@ -582,8 +609,12 @@
 
   </div>
 
-  <script>
-    const { createApp, ref, computed, onMounted, watch } = Vue;
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { getFirestore, doc, collection, onSnapshot, setDoc, deleteDoc, writeBatch } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+    const { createApp, ref, computed, onMounted } = Vue;
 
     createApp({
       setup() {
@@ -595,6 +626,13 @@
         const sidebarOpen = ref(false);
         const searchQuery = ref('');
 
+        // Cloud Firestore Synchronization State
+        const syncStatus = ref('syncing'); // 'syncing', 'synced', 'error', 'offline'
+        const currentUserId = ref('');
+        let db = null;
+        let auth = null;
+        let eventsColRef = null;
+
         // Modals state
         const activeDetailModal = ref(false);
         const activeFormModal = ref(false);
@@ -602,6 +640,115 @@
         const isEditMode = ref(false);
         const selectedEvent = ref({});
         const eventToDelete = ref(null);
+
+        const defaultEvents = [
+          // 115學年度上學期 (2026/08 - 2027/02) 完整行事表
+          { id: '101', title: '全校備課日與教職員會議', startDate: '2026-08-25', endDate: '2026-08-25', time: '08:30 - 16:00', department: '教導處', categoryId: 'admin', description: '全校教職員備課、環境整備與學期工作會議' },
+          { id: '102', title: '115學年度第一學期開學日', startDate: '2026-08-31', endDate: '2026-08-31', time: '07:30', department: '全校', categoryId: 'admin', description: '始業式、正式上課與發放教科書' },
+          { id: '201', title: '社團選社與開課', startDate: '2026-09-04', endDate: '2026-09-04', department: '訓導組', categoryId: 'regular', description: '課後社團報名與第一次社團活動' },
+          { id: '202', title: '國家防災日全校避難演練', startDate: '2026-09-18', endDate: '2026-09-18', time: '09:21', department: '訓導組', categoryId: 'event', description: '配合全國防災日進行地震避難與疏散演練' },
+          { id: '203', title: '教師節感恩慶祝活動', startDate: '2026-09-28', endDate: '2026-09-28', department: '輔導室', categoryId: 'event', description: '學生敬師感恩奉茶活動' },
+          { id: '301', title: '國慶日放假', startDate: '2026-10-10', endDate: '2026-10-10', department: '全校', categoryId: 'holiday', description: '國慶日放假一天' },
+          { id: '302', title: '語文競賽校內初賽', startDate: '2026-10-21', endDate: '2026-10-21', department: '教務組', categoryId: 'contest', description: '朗讀、演講、字音字形與作文競賽' },
+          { id: '401', title: '期中學業評量（國、自、英）', startDate: '2026-11-04', endDate: '2026-11-04', department: '教務組', categoryId: 'exam', description: '第一天期中考' },
+          { id: '402', title: '期中學業評量（數、社）', startDate: '2026-11-05', endDate: '2026-11-05', department: '教務組', categoryId: 'exam', description: '第二天期中考' },
+          { id: '403', title: '校慶運動會預演', startDate: '2026-11-10', endDate: '2026-11-10', department: '訓導組', categoryId: 'event', description: '進場與各項競賽流程預演' },
+          { id: '404', title: '土庫國小校慶社區運動會', startDate: '2026-11-12', endDate: '2026-11-12', time: '08:00 - 15:30', department: '全校', categoryId: 'event', description: '全校運動會、大會操表演與社區趣味競賽' },
+          { id: '501', title: '英語歌唱比賽暨耶誕聯歡', startDate: '2026-12-25', endDate: '2026-12-25', department: '教務組', categoryId: 'event', description: '全校各班英語歌唱成果發表與耶誕感恩活動' },
+          { id: '601', title: '元旦放假', startDate: '2027-01-01', endDate: '2027-01-01', department: '全校', categoryId: 'holiday', description: '開元紀念日/元旦放假一天' },
+          { id: '602', title: '學習扶助課程結束', startDate: '2027-01-08', endDate: '2027-01-08', department: '教務組', categoryId: 'admin', description: '本學期學習扶助課程結束' },
+          { id: '603', title: '期末學業評量（國、自、英）', startDate: '2027-01-13', endDate: '2027-01-13', department: '教務組', categoryId: 'exam', description: '第一天期末考。全校 12:40 統一放學；13:30-16:00 期末校務會議' },
+          { id: '604', title: '期末學業評量（數、社）', startDate: '2027-01-14', endDate: '2027-01-14', department: '教務組', categoryId: 'exam', description: '第二天期末考。發下露營行程通知單；公告參與露營學生名單' },
+          { id: '605', title: '期末英語大神考試與茶會抽獎', startDate: '2027-01-15', endDate: '2027-01-15', time: '09:00 - 13:20', department: '教務組', categoryId: 'event', description: '第二節期末英語大神考試；午休與大熊有約茶會暨書展抽獎與酷英抽獎' },
+          { id: '606', title: '休業式典禮暨慶生會', startDate: '2027-01-19', endDate: '2027-01-19', time: '08:00 - 15:00', department: '全校', categoryId: 'event', description: '08:00大掃除；09:30休業式典禮暨慶生會；13:30露營前訓課程；發成績單' },
+          { id: '607', title: '全校戶外教育見學', startDate: '2027-01-20', endDate: '2027-01-20', location: '華山/二尖山', department: '全校', categoryId: 'event', description: '1-3年級：華山土石流園區；4-6年級：二尖山' },
+          { id: '608', title: '寒假開始', startDate: '2027-01-21', endDate: '2027-01-21', department: '全校', categoryId: 'holiday', description: '115學年度第一學期寒假開始' },
+          { id: '609', title: '戶外教育露營課程', startDate: '2027-01-26', endDate: '2027-01-27', department: '全校', categoryId: 'event', description: '1/25 行李檢查；1/26-1/27 戶外教育露營' },
+          { id: '610', title: '農曆春節連假', startDate: '2027-02-04', endDate: '2027-02-10', department: '全校', categoryId: 'holiday', description: '春節連續假期' },
+          { id: '611', title: '下學期開學日', startDate: '2027-02-11', endDate: '2027-02-11', department: '全校', categoryId: 'admin', description: '115 學年度第二學期開學日（正式上課）' }
+        ];
+
+        const events = ref([...defaultEvents]);
+
+        onMounted(async () => {
+          try {
+            const appId = typeof __app_id !== 'undefined' ? __app_id : 'tuku-calendar-app';
+            const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
+              apiKey: "demo-key",
+              authDomain: "demo.firebaseapp.com",
+              projectId: "demo-project",
+              storageBucket: "demo.appspot.com",
+              messagingSenderId: "123456789",
+              appId: "1:123456789:web:demo"
+            };
+
+            const app = initializeApp(firebaseConfig);
+            auth = getAuth(app);
+            db = getFirestore(app);
+
+            // Step 1: Authenticate with custom token or anonymously
+            let userCredential = null;
+            if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+              userCredential = await signInWithCustomToken(auth, __initial_auth_token);
+            } else {
+              userCredential = await signInAnonymously(auth);
+            }
+
+            const user = userCredential.user;
+            if (!user) return;
+            currentUserId.value = user.uid;
+
+            // Step 2: Reference public collection path (RULE 1)
+            eventsColRef = collection(db, 'artifacts', appId, 'public', 'data', 'events');
+
+            // Step 3: Listen to Firestore real-time updates (RULE 2 - simple query)
+            onSnapshot(eventsColRef, async (snapshot) => {
+              syncStatus.value = 'synced';
+              
+              if (snapshot.empty) {
+                // First-time load: Seed initial default schedule to cloud database
+                await seedInitialData();
+              } else {
+                const cloudEvents = [];
+                snapshot.forEach(docSnap => {
+                  cloudEvents.push({ id: docSnap.id, ...docSnap.data() });
+                });
+                events.value = cloudEvents;
+              }
+            }, (err) => {
+              console.error("Firestore sync error:", err);
+              syncStatus.value = 'offline';
+            });
+
+          } catch (err) {
+            console.warn("Cloud sync initialization fallback:", err);
+            syncStatus.value = 'offline';
+          }
+        });
+
+        // Helper to seed initial calendar data to cloud database
+        const seedInitialData = async () => {
+          if (!eventsColRef) return;
+          syncStatus.value = 'syncing';
+          try {
+            const batch = writeBatch(db);
+            defaultEvents.forEach(evt => {
+              const docRef = doc(eventsColRef, evt.id);
+              batch.set(docRef, evt);
+            });
+            await batch.commit();
+            syncStatus.value = 'synced';
+          } catch (e) {
+            console.error("Failed to seed initial data:", e);
+            syncStatus.value = 'error';
+          }
+        };
+
+        const resetToDefaultData = async () => {
+          if (confirm('確定要將雲端行事曆恢復為預設學期行程嗎？目前自訂的新增修改將被重置。')) {
+            await seedInitialData();
+          }
+        };
 
         // History / Mobile Back Button Handling
         const pushHistoryState = (type) => {
@@ -703,38 +850,56 @@
 
         const selectedCategoryIds = ref(categories.value.map(c => c.id));
 
-        const events = ref([
-          // 115學年度上學期 (2026/08 - 2027/02) 完整行事表
-          { id: '101', title: '全校備課日與教職員會議', startDate: '2026-08-25', endDate: '2026-08-25', time: '08:30 - 16:00', department: '教導處', categoryId: 'admin', description: '全校教職員備課、環境整備與學期工作會議' },
-          { id: '102', title: '115學年度第一學期開學日', startDate: '2026-08-31', endDate: '2026-08-31', time: '07:30', department: '全校', categoryId: 'admin', description: '始業式、正式上課與發放教科書' },
+        async function saveEvent() {
+          syncStatus.value = 'syncing';
+          const newOrUpdatedEvt = { ...formEvent.value };
           
-          { id: '201', title: '社團選社與開課', startDate: '2026-09-04', endDate: '2026-09-04', department: '訓導組', categoryId: 'regular', description: '課後社團報名與第一次社團活動' },
-          { id: '202', title: '國家防災日全校避難演練', startDate: '2026-09-18', endDate: '2026-09-18', time: '09:21', department: '訓導組', categoryId: 'event', description: '配合全國防災日進行地震避難與疏散演練' },
-          { id: '203', title: '教師節感恩慶祝活動', startDate: '2026-09-28', endDate: '2026-09-28', department: '輔導室', categoryId: 'event', description: '學生敬師感恩奉茶活動' },
+          if (!newOrUpdatedEvt.id) {
+            newOrUpdatedEvt.id = 'evt_' + Date.now();
+          }
 
-          { id: '301', title: '國慶日放假', startDate: '2026-10-10', endDate: '2026-10-10', department: '全校', categoryId: 'holiday', description: '國慶日放假一天' },
-          { id: '302', title: '語文競賽校內初賽', startDate: '2026-10-21', endDate: '2026-10-21', department: '教務組', categoryId: 'contest', description: '朗讀、演講、字音字形與作文競賽' },
+          if (eventsColRef) {
+            try {
+              // Save directly to Firestore cloud database
+              const docRef = doc(eventsColRef, newOrUpdatedEvt.id);
+              await setDoc(docRef, newOrUpdatedEvt);
+              syncStatus.value = 'synced';
+            } catch (err) {
+              console.error("Error saving event to Firestore:", err);
+              syncStatus.value = 'error';
+            }
+          } else {
+            // Fallback for local memory state
+            if (isEditMode.value) {
+              const idx = events.value.findIndex(e => e.id === newOrUpdatedEvt.id);
+              if (idx !== -1) events.value[idx] = newOrUpdatedEvt;
+            } else {
+              events.value.push(newOrUpdatedEvt);
+            }
+          }
+          activeFormModal.value = false;
+        }
 
-          { id: '401', title: '期中學業評量（國、自、英）', startDate: '2026-11-04', endDate: '2026-11-04', department: '教務組', categoryId: 'exam', description: '第一天期中考' },
-          { id: '402', title: '期中學業評量（數、社）', startDate: '2026-11-05', endDate: '2026-11-05', department: '教務組', categoryId: 'exam', description: '第二天期中考' },
-          { id: '403', title: '校慶運動會預演', startDate: '2026-11-10', endDate: '2026-11-10', department: '訓導組', categoryId: 'event', description: '進場與各項競賽流程預演' },
-          { id: '404', title: '土庫國小校慶社區運動會', startDate: '2026-11-12', endDate: '2026-11-12', time: '08:00 - 15:30', department: '全校', categoryId: 'event', description: '全校運動會、大會操表演與社區趣味競賽' },
-
-          { id: '501', title: '英語歌唱比賽暨耶誕聯歡', startDate: '2026-12-25', endDate: '2026-12-25', department: '教務組', categoryId: 'event', description: '全校各班英語歌唱成果發表與耶誕感恩活動' },
-
-          // 116年 (2027年) 1月 & 2月
-          { id: '601', title: '元旦放假', startDate: '2027-01-01', endDate: '2027-01-01', department: '全校', categoryId: 'holiday', description: '開元紀念日/元旦放假一天' },
-          { id: '602', title: '學習扶助課程結束', startDate: '2027-01-08', endDate: '2027-01-08', department: '教務組', categoryId: 'admin', description: '本學期學習扶助課程結束' },
-          { id: '603', title: '期末學業評量（國、自、英）', startDate: '2027-01-13', endDate: '2027-01-13', department: '教務組', categoryId: 'exam', description: '第一天期末考。全校 12:40 統一放學；13:30-16:00 期末校務會議' },
-          { id: '604', title: '期末學業評量（數、社）', startDate: '2027-01-14', endDate: '2027-01-14', department: '教務組', categoryId: 'exam', description: '第二天期末考。發下露營行程通知單；公告參與露營學生名單' },
-          { id: '605', title: '期末英語大神考試與茶會抽獎', startDate: '2027-01-15', endDate: '2027-01-15', time: '09:00 - 13:20', department: '教務組', categoryId: 'event', description: '第二節期末英語大神考試；午休與大熊有約茶會暨書展抽獎與酷英抽獎' },
-          { id: '606', title: '休業式典禮暨慶生會', startDate: '2027-01-19', endDate: '2027-01-19', time: '08:00 - 15:00', department: '全校', categoryId: 'event', description: '08:00大掃除；09:30休業式典禮暨慶生會；13:30露營前訓課程；發成績單' },
-          { id: '607', title: '全校戶外教育見學', startDate: '2027-01-20', endDate: '2027-01-20', location: '華山/二尖山', department: '全校', categoryId: 'event', description: '1-3年級：華山土石流園區；4-6年級：二尖山' },
-          { id: '608', title: '寒假開始', startDate: '2027-01-21', endDate: '2027-01-21', department: '全校', categoryId: 'holiday', description: '115學年度第一學期寒假開始' },
-          { id: '609', title: '戶外教育露營課程', startDate: '2027-01-26', endDate: '2027-01-27', department: '全校', categoryId: 'event', description: '1/25 行李檢查；1/26-1/27 戶外教育露營' },
-          { id: '610', title: '農曆春節連假', startDate: '2027-02-04', endDate: '2027-02-10', department: '全校', categoryId: 'holiday', description: '春節連續假期' },
-          { id: '611', title: '下學期開學日', startDate: '2027-02-11', endDate: '2027-02-11', department: '全校', categoryId: 'admin', description: '115 學年度第二學期開學日（正式上課）' }
-        ]);
+        async function executeDelete() {
+          if (eventToDelete.value) {
+            syncStatus.value = 'syncing';
+            if (eventsColRef) {
+              try {
+                // Delete from Firestore cloud database
+                const docRef = doc(eventsColRef, eventToDelete.value.id);
+                await deleteDoc(docRef);
+                syncStatus.value = 'synced';
+              } catch (err) {
+                console.error("Error deleting event from Firestore:", err);
+                syncStatus.value = 'error';
+              }
+            } else {
+              events.value = events.value.filter(e => e.id !== eventToDelete.value.id);
+            }
+            eventToDelete.value = null;
+          }
+          activeDeleteModal.value = false;
+        }
 
         // Filtered events
         const filteredEvents = computed(() => {
@@ -979,30 +1144,10 @@
           activeFormModal.value = true;
         }
 
-        function saveEvent() {
-          if (isEditMode.value) {
-            const idx = events.value.findIndex(e => e.id === formEvent.value.id);
-            if (idx !== -1) {
-              events.value[idx] = { ...formEvent.value };
-            }
-          } else {
-            events.value.push({ ...formEvent.value });
-          }
-          activeFormModal.value = false;
-        }
-
         function confirmDelete(evt) {
           eventToDelete.value = evt;
           activeDetailModal.value = false;
           activeDeleteModal.value = true;
-        }
-
-        function executeDelete() {
-          if (eventToDelete.value) {
-            events.value = events.value.filter(e => e.id !== eventToDelete.value.id);
-            eventToDelete.value = null;
-          }
-          activeDeleteModal.value = false;
         }
 
         // Category & Utility Helpers
@@ -1071,6 +1216,9 @@
           miniCalendarDate,
           sidebarOpen,
           searchQuery,
+          syncStatus,
+          currentUserId,
+          resetToDefaultData,
           activeDetailModal,
           activeFormModal,
           activeDeleteModal,
