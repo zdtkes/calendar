@@ -684,6 +684,32 @@
         const passwordError = ref('');
         let pendingAdminAction = null;
 
+        // Local Storage persistence key and fallback helpers
+        const LOCAL_STORAGE_KEY = 'tuku_school_calendar_events_v1';
+
+        const loadLocalEvents = () => {
+          try {
+            const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
+            if (saved) {
+              const parsed = JSON.parse(saved);
+              if (Array.isArray(parsed) && parsed.length > 0) {
+                return parsed;
+              }
+            }
+          } catch (e) {
+            console.warn("LocalStorage not accessible:", e);
+          }
+          return null;
+        };
+
+        const saveLocalEvents = (data) => {
+          try {
+            localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(data));
+          } catch (e) {
+            console.warn("LocalStorage save skipped:", e);
+          }
+        };
+
         const requireAdmin = (actionCallback) => {
           if (isAdmin.value) {
             actionCallback();
@@ -745,7 +771,9 @@
           { id: '611', title: '下學期開學日', startDate: '2027-02-11', endDate: '2027-02-11', department: '全校', categoryId: 'admin', description: '115 學年度第二學期開學日（正式上課）' }
         ];
 
-        const events = ref([...defaultEvents]);
+        // Load persisted events from Local Storage first, fallback to default schedule
+        const savedEvents = loadLocalEvents();
+        const events = ref(savedEvents || [...defaultEvents]);
 
         onMounted(async () => {
           try {
@@ -753,7 +781,7 @@
             const firebaseConfigRaw = typeof __firebase_config !== 'undefined' ? __firebase_config : null;
 
             if (!firebaseConfigRaw) {
-              console.log("獨立運作模式 (無雲端配置)");
+              console.log("獨立/離線運作模式（使用本地儲存持久化）");
               syncStatus.value = 'offline';
               return;
             }
@@ -763,11 +791,16 @@
             auth = getAuth(app);
             db = getFirestore(app);
 
-            // Step 1: Authenticate with custom token or anonymously
+            // Step 1: Authenticate with custom token or anonymously with fallback
             let userCredential = null;
-            if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-              userCredential = await signInWithCustomToken(auth, __initial_auth_token);
-            } else {
+            try {
+              if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                userCredential = await signInWithCustomToken(auth, __initial_auth_token);
+              } else {
+                userCredential = await signInAnonymously(auth);
+              }
+            } catch (authErr) {
+              console.warn("Custom token login failed, falling back to anonymous auth:", authErr);
               userCredential = await signInAnonymously(auth);
             }
 
@@ -794,6 +827,7 @@
                   cloudEvents.push({ id: docSnap.id, ...docSnap.data() });
                 });
                 events.value = cloudEvents;
+                saveLocalEvents(cloudEvents);
               }
             }, (err) => {
               console.error("Firestore sync error:", err);
@@ -819,6 +853,7 @@
             });
             await batch.commit();
             syncStatus.value = 'synced';
+            saveLocalEvents(defaultEvents);
           } catch (e) {
             console.error("Failed to seed initial data:", e);
             syncStatus.value = 'error';
@@ -827,8 +862,12 @@
 
         const resetToDefaultData = async () => {
           requireAdmin(async () => {
-            if (confirm('確定要將雲端行事曆恢復為預設學期行程嗎？目前自訂的新增修改將被重置。')) {
-              await seedInitialData();
+            if (confirm('確定要將行事曆恢復為預設學期行程嗎？目前自訂的新增修改將被重置。')) {
+              events.value = [...defaultEvents];
+              saveLocalEvents(defaultEvents);
+              if (eventsColRef) {
+                await seedInitialData();
+              }
             }
           });
         };
@@ -935,7 +974,7 @@
 
         async function saveEvent() {
           syncStatus.value = 'syncing';
-          const newOrUpdatedEvt = { ...formEvent.value };
+          const newOrUpdatedEvt = JSON.parse(JSON.stringify(formEvent.value));
           
           if (!newOrUpdatedEvt.id) {
             newOrUpdatedEvt.id = 'evt_' + Date.now();
@@ -966,6 +1005,7 @@
             updateLocalState();
             syncStatus.value = 'synced';
           }
+          saveLocalEvents(events.value);
           activeFormModal.value = false;
         }
 
@@ -994,6 +1034,7 @@
               removeLocalState();
               syncStatus.value = 'synced';
             }
+            saveLocalEvents(events.value);
             eventToDelete.value = null;
           }
           activeDeleteModal.value = false;
