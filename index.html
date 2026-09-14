@@ -116,14 +116,16 @@
         </div>
 
         <!-- Cloud Sync Status Badge -->
-        <div class="hidden lg:flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 border border-gray-200">
+        <div class="hidden lg:flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 border border-gray-200"
+             :title="syncStatus === 'offline' ? '資料已安全自動儲存於本機瀏覽器 (LocalStorage)' : '雲端資料庫同步中'">
           <span class="w-2 h-2 rounded-full" :class="{
             'bg-green-500 animate-pulse': syncStatus === 'synced',
             'bg-amber-500 animate-spin': syncStatus === 'syncing',
-            'bg-red-500': syncStatus === 'error' || syncStatus === 'offline'
+            'bg-blue-500': syncStatus === 'offline',
+            'bg-red-500': syncStatus === 'error'
           }"></span>
           <span class="text-gray-600">
-            {{ syncStatus === 'synced' ? '雲端同步中' : (syncStatus === 'syncing' ? '同步處理中...' : '離線模式') }}
+            {{ syncStatus === 'synced' ? '雲端同步中' : (syncStatus === 'syncing' ? '同步處理中...' : '本機已儲存 (離線)') }}
           </span>
         </div>
 
@@ -226,9 +228,9 @@
           <!-- Cloud Synchronization Info & Data Control -->
           <div class="border-t border-gray-200 pt-3 mt-2 text-xs space-y-2 text-gray-500">
             <div class="flex items-center justify-between">
-              <span class="font-bold text-gray-600"><i class="fa-solid fa-cloud-arrow-up mr-1 text-blue-600"></i>雲端同步狀態</span>
-              <span class="px-1.5 py-0.5 rounded text-[10px]" :class="syncStatus === 'synced' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'">
-                {{ syncStatus === 'synced' ? '連線正常' : '連線中' }}
+              <span class="font-bold text-gray-600"><i class="fa-solid fa-hard-drive mr-1 text-blue-600"></i>資料保存狀態</span>
+              <span class="px-1.5 py-0.5 rounded text-[10px]" :class="syncStatus === 'synced' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'">
+                {{ syncStatus === 'synced' ? '雲端連線' : '本機安全保存' }}
               </span>
             </div>
             <p v-if="currentUserId" class="text-[10px] font-mono truncate text-gray-400">裝置識別: {{ currentUserId }}</p>
