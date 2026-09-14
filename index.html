@@ -35,12 +35,14 @@
     [v-cloak] {
       display: none !important;
     }
+    .sidebar {
+      display: none !important;
+    }
     body {
       font-family: 'Inter', 'Noto Sans TC', sans-serif;
       -webkit-tap-highlight-color: transparent;
       touch-action: manipulation;
     }
-    /* Mobile scrolling & touch smoothness */
     .custom-scrollbar {
       -webkit-overflow-scrolling: touch;
     }
@@ -70,7 +72,6 @@
       display: grid;
       grid-template-columns: repeat(7, minmax(0, 1fr));
     }
-    /* Optimized hardware-accelerated drawer animation */
     @keyframes slideUp {
       from { transform: translate3d(0, 100%, 0); }
       to { transform: translate3d(0, 0, 0); }
@@ -82,8 +83,24 @@
   </style>
 </head>
 <body class="bg-gray-50 text-gray-800 antialiased h-screen overflow-hidden flex flex-col select-none sm:select-auto">
-  <div id="app" class="h-full flex flex-col overflow-hidden" v-cloak>
+  <div id="app" class="h-full flex flex-col overflow-hidden relative" v-cloak>
     
+    <!-- Toast Notification Banner -->
+    <div v-if="toast.show" 
+         class="fixed top-4 left-1/2 -translate-x-1/2 z-50 px-4 py-2.5 rounded-xl shadow-lg border text-xs sm:text-sm font-semibold flex items-center space-x-2 transition-all duration-200"
+         :class="{
+           'bg-emerald-800 text-white border-emerald-700': toast.type === 'success',
+           'bg-red-800 text-white border-red-700': toast.type === 'error',
+           'bg-amber-800 text-white border-amber-700': toast.type === 'warning'
+         }">
+      <i class="fa-solid" :class="{
+        'fa-circle-check': toast.type === 'success',
+        'fa-circle-exclamation': toast.type === 'error',
+        'fa-triangle-exclamation': toast.type === 'warning'
+      }"></i>
+      <span>{{ toast.message }}</span>
+    </div>
+
     <!-- Top Header Navigation -->
     <header class="bg-white border-b border-gray-200 px-3 sm:px-4 py-2 sm:py-2.5 flex items-center justify-between shadow-xs z-20 flex-shrink-0 pt-safe">
       <div class="flex items-center space-x-2 sm:space-x-3">
@@ -692,6 +709,27 @@
       </div>
     </div>
 
+    <!-- CUSTOM CONFIRMATION DIALOG MODAL -->
+    <div v-if="confirmModal.show" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/50">
+      <div class="bg-white rounded-xl shadow-2xl w-full max-w-sm overflow-hidden border border-gray-100 p-6 space-y-4 animate-slide-up sm:animate-none">
+        <div class="flex items-center justify-between border-b pb-3">
+          <h3 class="text-base font-bold text-gray-800 flex items-center">
+            <i class="fa-solid fa-triangle-exclamation text-amber-500 mr-2"></i>{{ confirmModal.title }}
+          </h3>
+          <button @click="closeConfirm(false)" class="text-gray-400 hover:text-gray-600">
+            <i class="fa-solid fa-xmark text-lg"></i>
+          </button>
+        </div>
+        <p class="text-xs sm:text-sm text-gray-600 leading-relaxed whitespace-pre-wrap">
+          {{ confirmModal.message }}
+        </p>
+        <div class="flex justify-end space-x-2 pt-2 border-t border-gray-100">
+          <button @click="closeConfirm(false)" class="px-3.5 py-1.5 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg text-xs font-medium">取消</button>
+          <button @click="closeConfirm(true)" class="px-4 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-bold shadow-xs">確認刪除</button>
+        </div>
+      </div>
+    </div>
+
     <!-- ADMIN PASSWORD MODAL -->
     <div v-if="adminPasswordModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/50">
       <div class="bg-white rounded-xl shadow-2xl w-full max-w-sm overflow-hidden border border-gray-100 p-6 space-y-4 animate-slide-up sm:animate-none">
@@ -703,13 +741,15 @@
             <i class="fa-solid fa-xmark text-lg"></i>
           </button>
         </div>
-        <p class="text-xs text-gray-600">請輸入管理密碼以取得新增、修改與刪除權限：</p>
+        <p class="text-xs text-gray-600 leading-relaxed">
+          請輸入管理密碼以取得新增、修改與刪除權限：<br>
+          <span class="text-gray-400 font-mono">(預設測試密碼：<strong>2140</strong>)</span>
+        </p>
         <div>
           <input type="password" v-model="inputPassword" @keyup.enter="verifyPassword" placeholder="請輸入密碼 (預設: 2140)"
                  class="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                  :class="passwordError ? 'border-red-500 bg-red-50' : 'border-gray-300'">
           <p v-if="passwordError" class="text-xs text-red-500 mt-1 font-semibold">{{ passwordError }}</p>
-          <p class="text-[11px] text-gray-400 mt-1">預設密碼：<code class="bg-gray-100 px-1 py-0.5 rounded text-gray-700 font-mono">2140</code></p>
         </div>
         <div class="flex justify-end space-x-2 pt-2">
           <button @click="adminPasswordModal = false" class="px-3.5 py-1.5 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg text-xs font-medium">取消</button>
@@ -901,6 +941,32 @@
         let auth = null;
         let eventsColRef = null;
 
+        const toast = ref({ show: false, message: '', type: 'success' });
+        let toastTimer = null;
+
+        const showToast = (message, type = 'success') => {
+          toast.value = { show: true, message, type };
+          if (toastTimer) clearTimeout(toastTimer);
+          toastTimer = setTimeout(() => {
+            toast.value.show = false;
+          }, 3000);
+        };
+
+        // Confirmation dialog state
+        const confirmModal = ref({ show: false, title: '', message: '', action: null });
+
+        const showConfirm = (title, message, action) => {
+          confirmModal.value = { show: true, title, message, action };
+        };
+
+        const closeConfirm = (confirmed) => {
+          const action = confirmModal.value.action;
+          confirmModal.value = { show: false, title: '', message: '', action: null };
+          if (confirmed && action) {
+            action();
+          }
+        };
+
         const activeDetailModal = ref(false);
         const activeFormModal = ref(false);
         const activeDayModal = ref(false);
@@ -913,6 +979,7 @@
         const selectedEvent = ref({});
 
         const LOCAL_STORAGE_KEY = 'tuku_school_calendar_events_v1';
+        const HAS_SEEDED_KEY = 'tuku_has_seeded_v1';
         const FIREBASE_CONFIG_KEY = 'tuku_firebase_custom_config_v1';
 
         const isAdmin = ref(false);
@@ -926,7 +993,7 @@
             const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
             if (saved) {
               const parsed = JSON.parse(saved);
-              if (Array.isArray(parsed) && parsed.length > 0) {
+              if (Array.isArray(parsed)) {
                 return parsed;
               }
             }
@@ -960,19 +1027,21 @@
             isAdmin.value = true;
             adminPasswordModal.value = false;
             passwordError.value = '';
+            showToast('管理員驗證成功！', 'success');
             if (pendingAdminAction) {
               const callback = pendingAdminAction;
               pendingAdminAction = null;
               callback();
             }
           } else {
-            passwordError.value = '密碼錯誤！請重新輸入';
+            passwordError.value = '密碼錯誤！請輸入預設密碼 2140';
           }
         };
 
         const toggleAdminAuth = () => {
           if (isAdmin.value) {
             isAdmin.value = false;
+            showToast('已登出管理員身分', 'warning');
           } else {
             requireAdmin(() => {});
           }
@@ -1009,17 +1078,18 @@
           try {
             const batch = writeBatch(db);
             defaultEvents.forEach(evt => {
-              const docRef = doc(eventsColRef, evt.id);
+              const docRef = doc(eventsColRef, String(evt.id));
               batch.set(docRef, evt);
             });
             await batch.commit();
+            localStorage.setItem(HAS_SEEDED_KEY, 'true');
           } catch (err) {
             console.error("Error seeding initial data:", err);
           }
         };
 
         const savedEvents = loadLocalEvents();
-        const events = ref(savedEvents || [...defaultEvents]);
+        const events = ref(savedEvents !== null ? savedEvents : [...defaultEvents]);
 
         onMounted(async () => {
           await initFirebaseConnection();
@@ -1084,7 +1154,7 @@
             onSnapshot(eventsColRef, async (snapshot) => {
               syncStatus.value = 'synced';
               
-              if (snapshot.empty) {
+              if (snapshot.empty && !localStorage.getItem(HAS_SEEDED_KEY)) {
                 await seedInitialData();
               } else {
                 const cloudEvents = [];
@@ -1095,13 +1165,12 @@
                 saveLocalEvents(cloudEvents);
               }
             }, (err) => {
-              console.warn("Firestore sync error:", err);
+              console.warn("Firestore sync warning:", err);
               syncStatus.value = 'error';
-              firebaseModalError.value = 'Firestore 權限不足，已備援使用本機紀錄。';
             });
 
           } catch (err) {
-            console.warn("Cloud sync fallback:", err);
+            console.warn("Cloud sync fallback to local mode:", err);
             syncStatus.value = 'offline';
             eventsColRef = null;
           }
@@ -1158,6 +1227,7 @@
             localStorage.setItem(FIREBASE_CONFIG_KEY, JSON.stringify(cfg));
             activeFirebaseModal.value = false;
             await initFirebaseConnection();
+            showToast('已連接自訂 Firebase 資料庫', 'success');
           } catch (e) {
             firebaseModalError.value = '儲存失敗：' + e.message;
           }
@@ -1169,17 +1239,24 @@
           activeFirebaseModal.value = false;
           syncStatus.value = 'offline';
           eventsColRef = null;
+          showToast('已還原為預設設定', 'warning');
         };
 
         const resetToDefaultData = async () => {
-          requireAdmin(async () => {
-            if (confirm('確定要將行事曆恢復為預設學期行程嗎？')) {
-              events.value = [...defaultEvents];
-              saveLocalEvents(defaultEvents);
-              if (eventsColRef) {
-                await seedInitialData();
+          requireAdmin(() => {
+            showConfirm(
+              '重置行事曆',
+              '確定要將行事曆恢復為預設學期行程嗎？所有自訂修改將會被覆蓋。',
+              async () => {
+                events.value = [...defaultEvents];
+                saveLocalEvents(defaultEvents);
+                localStorage.removeItem(HAS_SEEDED_KEY);
+                if (eventsColRef) {
+                  await seedInitialData();
+                }
+                showToast('已重置為預設行事曆！', 'success');
               }
-            }
+            );
           });
         };
 
@@ -1206,7 +1283,8 @@
         };
 
         window.addEventListener('popstate', () => {
-          if (activeDetailModal.value) activeDetailModal.value = false;
+          if (confirmModal.value.show) closeConfirm(false);
+          else if (activeDetailModal.value) activeDetailModal.value = false;
           else if (activeDayModal.value) activeDayModal.value = false;
           else if (activeFormModal.value) activeFormModal.value = false;
           else if (adminPasswordModal.value) adminPasswordModal.value = false;
@@ -1269,7 +1347,6 @@
           { id: 'holiday', name: '國定假日', color: '#ec4899', bgColor: '#fce7f3', textColor: '#9d174d' }
         ]);
 
-        // O(1) Category Lookup Hash Map
         const categoryMap = computed(() => {
           const map = {};
           categories.value.forEach(c => { map[c.id] = c; });
@@ -1279,39 +1356,38 @@
         const selectedCategoryIds = ref(categories.value.map(c => c.id));
 
         async function saveEvent() {
-          syncStatus.value = 'syncing';
           const newOrUpdatedEvt = JSON.parse(JSON.stringify(formEvent.value));
           
           if (!newOrUpdatedEvt.id) {
             newOrUpdatedEvt.id = 'evt_' + Date.now();
+          } else {
+            newOrUpdatedEvt.id = String(newOrUpdatedEvt.id);
           }
 
-          const updateLocalState = () => {
-            const idx = events.value.findIndex(e => e.id === newOrUpdatedEvt.id);
-            if (idx !== -1) {
-              events.value[idx] = newOrUpdatedEvt;
-            } else {
-              events.value.push(newOrUpdatedEvt);
-            }
-          };
-
-          if (eventsColRef) {
-            try {
-              const docRef = doc(eventsColRef, newOrUpdatedEvt.id);
-              await setDoc(docRef, newOrUpdatedEvt);
-              syncStatus.value = 'synced';
-              updateLocalState();
-            } catch (err) {
-              console.error("Error saving event:", err);
-              syncStatus.value = 'error';
-              updateLocalState();
-            }
+          const idx = events.value.findIndex(e => String(e.id) === String(newOrUpdatedEvt.id));
+          if (idx !== -1) {
+            events.value[idx] = newOrUpdatedEvt;
           } else {
-            updateLocalState();
-            syncStatus.value = 'synced';
+            events.value.push(newOrUpdatedEvt);
           }
           saveLocalEvents(events.value);
           activeFormModal.value = false;
+
+          if (eventsColRef) {
+            syncStatus.value = 'syncing';
+            try {
+              const docRef = doc(eventsColRef, String(newOrUpdatedEvt.id));
+              await setDoc(docRef, newOrUpdatedEvt);
+              syncStatus.value = 'synced';
+              showToast(isEditMode.value ? '變更已成功儲存！' : '行程新增成功！', 'success');
+            } catch (err) {
+              console.warn("Cloud save failed, saved locally:", err);
+              syncStatus.value = 'error';
+              showToast('已保存於本機 (雲端無寫入權限)', 'warning');
+            }
+          } else {
+            showToast('已於本機成功儲存行程！', 'success');
+          }
         }
 
         const filteredEvents = computed(() => {
@@ -1333,7 +1409,6 @@
           }).sort((a, b) => a.startDate.localeCompare(b.startDate));
         });
 
-        // Pre-indexed Date Hash Map for O(1) Month/Week Grid Performance
         const eventsByDateMap = computed(() => {
           const map = new Map();
           const list = filteredEvents.value;
@@ -1580,34 +1655,45 @@
 
         function confirmDeleteEvent(evt) {
           requireAdmin(() => {
-            if (confirm(`確定要刪除「${evt.title}」這項活動嗎？`)) {
-              deleteEvent(evt);
-            }
+            showConfirm(
+              '刪除行程確認',
+              `確定要刪除「${evt.title}」這項活動嗎？此操作無法復原。`,
+              () => deleteEvent(evt)
+            );
           });
         }
 
         async function deleteEvent(evt) {
-          if (!evt || !evt.id) return;
-          syncStatus.value = 'syncing';
+          if (!evt || evt.id === undefined || evt.id === null) return;
 
-          events.value = events.value.filter(e => e.id !== evt.id);
+          const targetId = String(evt.id);
+          const targetTitle = evt.title;
+
+          // 1. Local deletion with string ID matching
+          events.value = events.value.filter(e => String(e.id) !== targetId);
           saveLocalEvents(events.value);
 
-          if (eventsColRef) {
-            try {
-              const docRef = doc(eventsColRef, evt.id);
-              await deleteDoc(docRef);
-              syncStatus.value = 'synced';
-            } catch (err) {
-              console.error("Error deleting event from Cloud:", err);
-              syncStatus.value = 'error';
-            }
-          } else {
-            syncStatus.value = 'synced';
-          }
-
+          // Close active modals
           activeDetailModal.value = false;
           activeFormModal.value = false;
+          activeDayModal.value = false;
+
+          // 2. Cloud deletion attempt
+          if (eventsColRef) {
+            syncStatus.value = 'syncing';
+            try {
+              const docRef = doc(eventsColRef, targetId);
+              await deleteDoc(docRef);
+              syncStatus.value = 'synced';
+              showToast(`已成功刪除「${targetTitle}」`, 'success');
+            } catch (err) {
+              console.warn("Cloud delete failed, deleted locally:", err);
+              syncStatus.value = 'error';
+              showToast(`已於本機成功刪除「${targetTitle}」`, 'warning');
+            }
+          } else {
+            showToast(`已成功刪除「${targetTitle}」`, 'success');
+          }
         }
 
         const allCategoriesSelected = computed(() => selectedCategoryIds.value.length === categories.value.length);
@@ -1698,8 +1784,12 @@
           parseJsonConfig,
           saveFirebaseConfig,
           clearFirebaseConfig,
+          confirmModal,
+          showConfirm,
+          closeConfirm,
           activeFormModal,
           activeDayModal,
+          activeDetailModal,
           isEditMode,
           selectedEvent,
           formEvent,
@@ -1716,6 +1806,7 @@
           weekViewDays,
           dayViewEvents,
           groupedAgendaEvents,
+          toast,
           goToToday,
           navigatePrev,
           navigateNext,
