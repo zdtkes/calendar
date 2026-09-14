@@ -692,6 +692,180 @@
       </div>
     </div>
 
+    <!-- ADMIN PASSWORD MODAL -->
+    <div v-if="adminPasswordModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/50">
+      <div class="bg-white rounded-xl shadow-2xl w-full max-w-sm overflow-hidden border border-gray-100 p-6 space-y-4 animate-slide-up sm:animate-none">
+        <div class="flex items-center justify-between border-b pb-3">
+          <h3 class="text-base font-bold text-gray-800 flex items-center">
+            <i class="fa-solid fa-lock text-amber-500 mr-2"></i>管理員驗證
+          </h3>
+          <button @click="adminPasswordModal = false" class="text-gray-400 hover:text-gray-600">
+            <i class="fa-solid fa-xmark text-lg"></i>
+          </button>
+        </div>
+        <p class="text-xs text-gray-600">請輸入管理密碼以取得新增、修改與刪除權限：</p>
+        <div>
+          <input type="password" v-model="inputPassword" @keyup.enter="verifyPassword" placeholder="請輸入密碼 (預設: 2140)"
+                 class="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                 :class="passwordError ? 'border-red-500 bg-red-50' : 'border-gray-300'">
+          <p v-if="passwordError" class="text-xs text-red-500 mt-1 font-semibold">{{ passwordError }}</p>
+          <p class="text-[11px] text-gray-400 mt-1">預設密碼：<code class="bg-gray-100 px-1 py-0.5 rounded text-gray-700 font-mono">2140</code></p>
+        </div>
+        <div class="flex justify-end space-x-2 pt-2">
+          <button @click="adminPasswordModal = false" class="px-3.5 py-1.5 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg text-xs font-medium">取消</button>
+          <button @click="verifyPassword" class="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-medium shadow-xs">登入驗證</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ADD / EDIT EVENT FORM MODAL -->
+    <div v-if="activeFormModal" class="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-gray-900/50">
+      <div class="bg-white rounded-t-2xl sm:rounded-xl shadow-2xl w-full max-w-lg overflow-hidden border border-gray-100 flex flex-col max-h-[90vh] animate-slide-up sm:animate-none">
+        
+        <div class="w-12 h-1 bg-gray-300 rounded-full mx-auto my-2 sm:hidden"></div>
+
+        <div class="bg-blue-600 px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between text-white">
+          <h3 class="text-base sm:text-lg font-bold leading-tight">
+            <i class="fa-solid" :class="isEditMode ? 'fa-pen-to-square' : 'fa-calendar-plus'"></i>
+            {{ isEditMode ? '編輯行程活動' : '新增行程活動' }}
+          </h3>
+          <button @click="activeFormModal = false" class="p-1.5 hover:bg-white/20 rounded-lg transition-colors">
+            <i class="fa-solid fa-xmark text-lg"></i>
+          </button>
+        </div>
+
+        <form @submit.prevent="saveEvent" class="p-4 sm:p-6 overflow-y-auto custom-scrollbar flex-1 space-y-4 text-xs sm:text-sm">
+          <div>
+            <label class="block font-bold text-gray-700 mb-1">活動名稱 <span class="text-red-500">*</span></label>
+            <input type="text" v-model="formEvent.title" required placeholder="請輸入活動名稱"
+                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label class="block font-bold text-gray-700 mb-1">開始日期 <span class="text-red-500">*</span></label>
+              <input type="date" v-model="formEvent.startDate" required
+                     class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+            </div>
+            <div>
+              <label class="block font-bold text-gray-700 mb-1">結束日期</label>
+              <input type="date" v-model="formEvent.endDate"
+                     class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label class="block font-bold text-gray-700 mb-1">時間說明 (選填)</label>
+              <input type="text" v-model="formEvent.time" placeholder="例如: 08:00 - 12:00"
+                     class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+            </div>
+            <div>
+              <label class="block font-bold text-gray-700 mb-1">承辦單位</label>
+              <select v-model="formEvent.department" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <option v-for="dept in departments" :key="dept" :value="dept">{{ dept }}</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label class="block font-bold text-gray-700 mb-1">活動分類</label>
+              <select v-model="formEvent.categoryId" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <option v-for="cat in categories" :key="cat.id" :value="cat.id">{{ cat.name }}</option>
+              </select>
+            </div>
+            <div>
+              <label class="block font-bold text-gray-700 mb-1">活動地點 (選填)</label>
+              <input type="text" v-model="formEvent.location" placeholder="例如: 視聽教室 / 操場"
+                     class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+            </div>
+          </div>
+
+          <div>
+            <label class="block font-bold text-gray-700 mb-1">詳細說明 (選填)</label>
+            <textarea v-model="formEvent.description" rows="3" placeholder="請輸入詳細活動注意事項或對象說明"
+                      class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
+          </div>
+
+          <div class="pt-3 border-t border-gray-100 flex items-center justify-between pb-safe">
+            <button type="button" @click="activeFormModal = false" class="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg font-medium">
+              取消
+            </button>
+            <button type="submit" class="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold shadow-xs">
+              {{ isEditMode ? '儲存變更' : '確認新增' }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- FIREBASE CONFIG MODAL -->
+    <div v-if="activeFirebaseModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/50">
+      <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden border border-gray-100 p-6 space-y-4 animate-slide-up sm:animate-none">
+        <div class="flex items-center justify-between border-b pb-3">
+          <h3 class="text-base font-bold text-gray-800 flex items-center">
+            <i class="fa-solid fa-cloud text-blue-600 mr-2"></i>Firebase 雲端資料庫金鑰設定
+          </h3>
+          <button @click="activeFirebaseModal = false" class="text-gray-400 hover:text-gray-600">
+            <i class="fa-solid fa-xmark text-lg"></i>
+          </button>
+        </div>
+
+        <p class="text-xs text-gray-600 leading-relaxed">
+          若需將行事曆同步至特定的 Firebase Firestore，可貼上專案設定或手動填寫欄位：
+        </p>
+
+        <div class="space-y-2">
+          <label class="block text-xs font-bold text-gray-700">自動解析 Firebase Config 文字 (選填)</label>
+          <div class="flex space-x-2">
+            <textarea v-model="rawConfigInput" rows="2" placeholder='貼上 firebaseConfig 物件，如 const firebaseConfig = { apiKey: "...", ... }'
+                      class="flex-1 px-2.5 py-1.5 border border-gray-300 rounded-lg text-xs font-mono focus:outline-none focus:ring-1 focus:ring-blue-500"></textarea>
+            <button @click="parseJsonConfig" class="px-3 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-xs font-medium self-end">
+              解析
+            </button>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+          <div>
+            <label class="block font-semibold text-gray-700">apiKey</label>
+            <input type="text" v-model="customFirebaseConfig.apiKey" class="w-full px-2 py-1 border rounded text-xs">
+          </div>
+          <div>
+            <label class="block font-semibold text-gray-700">authDomain</label>
+            <input type="text" v-model="customFirebaseConfig.authDomain" class="w-full px-2 py-1 border rounded text-xs">
+          </div>
+          <div>
+            <label class="block font-semibold text-gray-700">projectId</label>
+            <input type="text" v-model="customFirebaseConfig.projectId" class="w-full px-2 py-1 border rounded text-xs">
+          </div>
+          <div>
+            <label class="block font-semibold text-gray-700">appId</label>
+            <input type="text" v-model="customFirebaseConfig.appId" class="w-full px-2 py-1 border rounded text-xs">
+          </div>
+        </div>
+
+        <div v-if="firebaseModalError" class="p-2 bg-amber-50 text-amber-800 rounded text-xs font-medium">
+          {{ firebaseModalError }}
+        </div>
+
+        <div class="flex items-center justify-between pt-2 border-t border-gray-100">
+          <button @click="clearFirebaseConfig" class="text-xs text-red-600 hover:underline">
+            清除設定 (還原預設)
+          </button>
+          <div class="flex space-x-2">
+            <button @click="activeFirebaseModal = false" class="px-3 py-1.5 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg text-xs font-medium">
+              取消
+            </button>
+            <button @click="saveFirebaseConfig" class="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold shadow-xs">
+              儲存並連接
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
   </div>
 
   <script type="module">
