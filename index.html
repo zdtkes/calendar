@@ -750,15 +750,15 @@
         onMounted(async () => {
           try {
             const appId = typeof __app_id !== 'undefined' ? __app_id : 'tuku-calendar-app';
-            const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
-              apiKey: "demo-key",
-              authDomain: "demo.firebaseapp.com",
-              projectId: "demo-project",
-              storageBucket: "demo.appspot.com",
-              messagingSenderId: "123456789",
-              appId: "1:123456789:web:demo"
-            };
+            const firebaseConfigRaw = typeof __firebase_config !== 'undefined' ? __firebase_config : null;
 
+            if (!firebaseConfigRaw) {
+              console.log("獨立運作模式 (無雲端配置)");
+              syncStatus.value = 'offline';
+              return;
+            }
+
+            const firebaseConfig = JSON.parse(firebaseConfigRaw);
             const app = initializeApp(firebaseConfig);
             auth = getAuth(app);
             db = getFirestore(app);
@@ -772,7 +772,10 @@
             }
 
             const user = userCredential.user;
-            if (!user) return;
+            if (!user) {
+              syncStatus.value = 'offline';
+              return;
+            }
             currentUserId.value = user.uid;
 
             // Step 2: Reference public collection path (RULE 1)
@@ -800,6 +803,7 @@
           } catch (err) {
             console.warn("Cloud sync initialization fallback:", err);
             syncStatus.value = 'offline';
+            eventsColRef = null;
           }
         });
 
@@ -937,24 +941,30 @@
             newOrUpdatedEvt.id = 'evt_' + Date.now();
           }
 
+          const updateLocalState = () => {
+            const idx = events.value.findIndex(e => e.id === newOrUpdatedEvt.id);
+            if (idx !== -1) {
+              events.value[idx] = newOrUpdatedEvt;
+            } else {
+              events.value.push(newOrUpdatedEvt);
+            }
+          };
+
           if (eventsColRef) {
             try {
               // Save directly to Firestore cloud database
               const docRef = doc(eventsColRef, newOrUpdatedEvt.id);
               await setDoc(docRef, newOrUpdatedEvt);
               syncStatus.value = 'synced';
+              updateLocalState();
             } catch (err) {
               console.error("Error saving event to Firestore:", err);
               syncStatus.value = 'error';
+              updateLocalState();
             }
           } else {
-            // Fallback for local memory state
-            if (isEditMode.value) {
-              const idx = events.value.findIndex(e => e.id === newOrUpdatedEvt.id);
-              if (idx !== -1) events.value[idx] = newOrUpdatedEvt;
-            } else {
-              events.value.push(newOrUpdatedEvt);
-            }
+            updateLocalState();
+            syncStatus.value = 'synced';
           }
           activeFormModal.value = false;
         }
@@ -962,18 +972,27 @@
         async function executeDelete() {
           if (eventToDelete.value) {
             syncStatus.value = 'syncing';
+            const targetId = eventToDelete.value.id;
+
+            const removeLocalState = () => {
+              events.value = events.value.filter(e => e.id !== targetId);
+            };
+
             if (eventsColRef) {
               try {
                 // Delete from Firestore cloud database
-                const docRef = doc(eventsColRef, eventToDelete.value.id);
+                const docRef = doc(eventsColRef, targetId);
                 await deleteDoc(docRef);
                 syncStatus.value = 'synced';
+                removeLocalState();
               } catch (err) {
                 console.error("Error deleting event from Firestore:", err);
                 syncStatus.value = 'error';
+                removeLocalState();
               }
             } else {
-              events.value = events.value.filter(e => e.id !== eventToDelete.value.id);
+              removeLocalState();
+              syncStatus.value = 'synced';
             }
             eventToDelete.value = null;
           }
