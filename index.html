@@ -535,14 +535,12 @@
       </button>
     </nav>
 
-    <!-- DAY SUMMARY MODAL (Mobile Bottom Sheet Friendly) -->
+    <!-- DAY SUMMARY MODAL -->
     <div v-if="activeDayModal" class="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-gray-900/50 backdrop-blur-2xs">
       <div class="bg-white rounded-t-2xl sm:rounded-xl shadow-2xl w-full max-w-lg overflow-hidden border border-gray-100 flex flex-col max-h-[85vh] animate-slide-up sm:animate-none">
         
-        <!-- Mobile Bottom Sheet HandleBar -->
         <div class="w-12 h-1 bg-gray-300 rounded-full mx-auto my-2 sm:hidden"></div>
 
-        <!-- Header -->
         <div class="bg-blue-600 px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between text-white">
           <div>
             <h3 class="text-base sm:text-lg font-bold leading-tight">{{ formatFullDate(selectedDate) }}</h3>
@@ -553,7 +551,6 @@
           </button>
         </div>
 
-        <!-- Content -->
         <div class="p-4 sm:p-6 overflow-y-auto custom-scrollbar flex-1 space-y-2.5">
           <div v-if="dayViewEvents.length === 0" class="text-center py-8 text-gray-400">
             <i class="fa-regular fa-calendar-check text-3xl mb-2 text-gray-300"></i>
@@ -581,7 +578,6 @@
           </div>
         </div>
 
-        <!-- Footer -->
         <div class="bg-gray-50 px-4 sm:px-6 py-3 border-t border-gray-100 flex items-center justify-between pb-safe">
           <button @click="openAddModal(selectedDateStr); activeDayModal = false;" class="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold transition flex items-center space-x-1">
             <i class="fa-solid fa-plus text-xs"></i>
@@ -600,7 +596,7 @@
       </div>
     </div>
 
-    <!-- EVENT DETAIL MODAL -->
+    <!-- EVENT DETAIL MODAL (Notice: Delete button removed as per requirements) -->
     <div v-if="activeDetailModal" class="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-gray-900/50 backdrop-blur-2xs">
       <div class="bg-white rounded-t-2xl sm:rounded-xl shadow-2xl w-full max-w-lg overflow-hidden border border-gray-100 animate-slide-up sm:animate-none">
         
@@ -613,9 +609,6 @@
           <div class="flex items-center space-x-1">
             <button @click="openEditModal(selectedEvent)" class="p-2 hover:bg-black/20 rounded-lg transition" title="編輯">
               <i class="fa-solid fa-pen-to-square"></i>
-            </button>
-            <button @click="confirmDelete(selectedEvent)" class="p-2 hover:bg-black/20 rounded-lg transition" title="刪除">
-              <i class="fa-solid fa-trash-can"></i>
             </button>
             <button @click="activeDetailModal = false" class="p-2 hover:bg-black/20 rounded-lg transition" title="關閉">
               <i class="fa-solid fa-xmark text-lg"></i>
@@ -746,28 +739,7 @@
       </div>
     </div>
 
-    <!-- DELETE CONFIRMATION MODAL -->
-    <div v-if="activeDeleteModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/50 backdrop-blur-2xs">
-      <div class="bg-white rounded-xl shadow-xl w-full max-w-xs p-5 text-center space-y-3">
-        <div class="w-10 h-10 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto text-lg">
-          <i class="fa-solid fa-triangle-exclamation"></i>
-        </div>
-        <div>
-          <h3 class="font-bold text-gray-800 text-sm sm:text-base">確定要刪除？</h3>
-          <p class="text-xs text-gray-500 mt-1">「{{ eventToDelete?.title }}」刪除後無法恢復。</p>
-        </div>
-        <div class="flex justify-center space-x-2 pt-2">
-          <button @click="activeDeleteModal = false" class="px-3.5 py-1.5 border border-gray-300 text-gray-700 text-xs font-medium rounded-lg">
-            取消
-          </button>
-          <button @click="executeDelete" class="px-3.5 py-1.5 bg-red-600 text-white text-xs font-medium rounded-lg shadow-xs">
-            確認刪除
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- PASSWORD VERIFICATION MODAL -->
+    <!-- PASSWORD VERIFICATION MODAL (Notice: Password hint/default password removed) -->
     <div v-if="adminPasswordModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/50 backdrop-blur-2xs">
       <div class="bg-white rounded-xl shadow-2xl w-full max-w-xs overflow-hidden border border-gray-100">
         <div class="bg-amber-600 px-4 py-3 flex items-center justify-between text-white">
@@ -782,7 +754,7 @@
         <form @submit.prevent="verifyPassword" class="p-4 sm:p-5 space-y-3">
           <p class="text-xs text-gray-600">請輸入管理員密碼：</p>
           <div>
-            <input type="password" v-model="inputPassword" placeholder="預設密碼：2140" autofocus
+            <input type="password" v-model="inputPassword" placeholder="請輸入密碼" autofocus
                    class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
             <p v-if="passwordError" class="text-xs text-red-600 font-bold mt-1.5 flex items-center">
               <i class="fa-solid fa-circle-exclamation mr-1"></i>{{ passwordError }}
@@ -875,7 +847,7 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
     import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-    import { getFirestore, doc, collection, onSnapshot, setDoc, deleteDoc, writeBatch } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+    import { getFirestore, doc, collection, onSnapshot, setDoc, writeBatch } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
     const { createApp, ref, computed, onMounted } = Vue;
 
@@ -913,7 +885,6 @@
         // Modals state
         const activeDetailModal = ref(false);
         const activeFormModal = ref(false);
-        const activeDeleteModal = ref(false);
         const activeDayModal = ref(false);
         const activeFirebaseModal = ref(false);
         const firebaseModalError = ref('');
@@ -922,13 +893,12 @@
 
         const isEditMode = ref(false);
         const selectedEvent = ref({});
-        const eventToDelete = ref(null);
 
         // Local Storage persistence keys
         const LOCAL_STORAGE_KEY = 'tuku_school_calendar_events_v1';
         const FIREBASE_CONFIG_KEY = 'tuku_firebase_custom_config_v1';
 
-        // Admin Auth State & Management Password (2140)
+        // Admin Auth State & Management Password
         const isAdmin = ref(false);
         const adminPasswordModal = ref(false);
         const inputPassword = ref('');
@@ -1223,7 +1193,6 @@
           if (activeDetailModal.value) activeDetailModal.value = false;
           else if (activeDayModal.value) activeDayModal.value = false;
           else if (activeFormModal.value) activeFormModal.value = false;
-          else if (activeDeleteModal.value) activeDeleteModal.value = false;
           else if (adminPasswordModal.value) adminPasswordModal.value = false;
           else if (activeFirebaseModal.value) activeFirebaseModal.value = false;
           else if (sidebarOpen.value) sidebarOpen.value = false;
@@ -1320,36 +1289,6 @@
           }
           saveLocalEvents(events.value);
           activeFormModal.value = false;
-        }
-
-        async function executeDelete() {
-          if (eventToDelete.value) {
-            syncStatus.value = 'syncing';
-            const targetId = eventToDelete.value.id;
-
-            const removeLocalState = () => {
-              events.value = events.value.filter(e => e.id !== targetId);
-            };
-
-            if (eventsColRef) {
-              try {
-                const docRef = doc(eventsColRef, targetId);
-                await deleteDoc(docRef);
-                syncStatus.value = 'synced';
-                removeLocalState();
-              } catch (err) {
-                console.error("Error deleting event:", err);
-                syncStatus.value = 'error';
-                removeLocalState();
-              }
-            } else {
-              removeLocalState();
-              syncStatus.value = 'synced';
-            }
-            saveLocalEvents(events.value);
-            eventToDelete.value = null;
-          }
-          activeDeleteModal.value = false;
         }
 
         const filteredEvents = computed(() => {
@@ -1591,14 +1530,6 @@
           });
         }
 
-        function confirmDelete(evt) {
-          requireAdmin(() => {
-            eventToDelete.value = evt;
-            activeDetailModal.value = false;
-            activeDeleteModal.value = true;
-          });
-        }
-
         const allCategoriesSelected = computed(() => selectedCategoryIds.value.length === categories.value.length);
         
         function toggleAllCategories() {
@@ -1692,11 +1623,9 @@
           saveFirebaseConfig,
           clearFirebaseConfig,
           activeFormModal,
-          activeDeleteModal,
           activeDayModal,
           isEditMode,
           selectedEvent,
-          eventToDelete,
           formEvent,
           departments,
           selectedDepartments,
@@ -1720,8 +1649,6 @@
           openAddModal,
           openEditModal,
           saveEvent,
-          confirmDelete,
-          executeDelete,
           allCategoriesSelected,
           toggleAllCategories,
           getCategoryCount,
