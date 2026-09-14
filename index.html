@@ -116,18 +116,20 @@
         </div>
 
         <!-- Cloud Sync Status Badge -->
-        <div class="hidden lg:flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 border border-gray-200"
-             :title="syncStatus === 'offline' ? '資料已安全自動儲存於本機瀏覽器 (LocalStorage)' : '雲端資料庫同步中'">
+        <button @click="openFirebaseModal" 
+                class="hidden lg:flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 hover:bg-blue-50 border border-gray-200 transition cursor-pointer"
+                title="點擊設定 Firebase 雲端跨裝置同步金鑰">
           <span class="w-2 h-2 rounded-full" :class="{
             'bg-green-500 animate-pulse': syncStatus === 'synced',
             'bg-amber-500 animate-spin': syncStatus === 'syncing',
             'bg-blue-500': syncStatus === 'offline',
             'bg-red-500': syncStatus === 'error'
           }"></span>
-          <span class="text-gray-600">
-            {{ syncStatus === 'synced' ? '雲端同步中' : (syncStatus === 'syncing' ? '同步處理中...' : '本機已儲存 (離線)') }}
+          <span class="text-gray-600 font-semibold">
+            {{ syncStatus === 'synced' ? '雲端同步中' : (syncStatus === 'syncing' ? '同步處理中...' : '本機儲存 (點擊設定雲端)') }}
           </span>
-        </div>
+          <i class="fa-solid fa-gear text-gray-400 hover:text-blue-600 text-xs ml-1"></i>
+        </button>
 
         <!-- View Switcher -->
         <div class="hidden sm:flex bg-gray-100 p-1 rounded-lg border border-gray-200 text-xs sm:text-sm font-medium">
@@ -228,10 +230,10 @@
           <!-- Cloud Synchronization Info & Data Control -->
           <div class="border-t border-gray-200 pt-3 mt-2 text-xs space-y-2 text-gray-500">
             <div class="flex items-center justify-between">
-              <span class="font-bold text-gray-600"><i class="fa-solid fa-hard-drive mr-1 text-blue-600"></i>資料保存狀態</span>
-              <span class="px-1.5 py-0.5 rounded text-[10px]" :class="syncStatus === 'synced' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'">
-                {{ syncStatus === 'synced' ? '雲端連線' : '本機安全保存' }}
-              </span>
+              <span class="font-bold text-gray-600"><i class="fa-solid fa-cloud mr-1 text-blue-600"></i>跨裝置雲端同步</span>
+              <button @click="openFirebaseModal" class="px-2 py-0.5 rounded text-[11px] font-bold bg-blue-100 hover:bg-blue-200 text-blue-700 transition">
+                <i class="fa-solid fa-sliders mr-1"></i>設定金鑰
+              </button>
             </div>
             <p v-if="currentUserId" class="text-[10px] font-mono truncate text-gray-400">裝置識別: {{ currentUserId }}</p>
             <button @click="resetToDefaultData" class="w-full py-1.5 px-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded text-xs transition flex items-center justify-center space-x-1">
@@ -617,31 +619,89 @@
 
     <!-- PASSWORD VERIFICATION MODAL -->
     <div v-if="adminPasswordModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/50 backdrop-blur-xs">
-      <div class="bg-white rounded-xl shadow-2xl w-full max-w-sm overflow-hidden border border-gray-100">
-        <div class="bg-amber-600 px-5 py-3 flex items-center justify-between text-white">
-          <h3 class="font-bold text-sm flex items-center">
-            <i class="fa-solid fa-shield-halved mr-2"></i>管理員身分驗證
+    <!-- FIREBASE CLOUD CONFIGURATION MODAL -->
+    <div v-if="activeFirebaseModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/50 backdrop-blur-xs">
+      <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden border border-gray-100">
+        <div class="bg-blue-600 px-5 py-3.5 flex items-center justify-between text-white">
+          <h3 class="font-bold text-base flex items-center">
+            <i class="fa-solid fa-cloud-arrow-up mr-2"></i>設定 Firebase 免費雲端資料庫
           </h3>
-          <button @click="adminPasswordModal = false" class="text-white hover:opacity-80">
-            <i class="fa-solid fa-xmark text-base"></i>
+          <button @click="activeFirebaseModal = false" class="text-white hover:opacity-80">
+            <i class="fa-solid fa-xmark text-lg"></i>
           </button>
         </div>
-        <form @submit.prevent="verifyPassword" class="p-5 space-y-4">
-          <p class="text-xs text-gray-600">此操作需要管理員權限，請輸入管理密碼以繼續：</p>
-          <div>
-            <input type="password" v-model="inputPassword" ref="passwordInput" placeholder="請輸入管理密碼" autofocus required
-                   class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-center tracking-widest font-mono focus:ring-2 focus:ring-amber-500 focus:outline-none">
-            <p v-if="passwordError" class="text-xs text-red-500 mt-1 font-semibold text-center">{{ passwordError }}</p>
+        
+        <div class="p-6 space-y-4 max-h-[80vh] overflow-y-auto custom-scrollbar">
+          <div class="bg-blue-50 border border-blue-200 rounded-lg p-3 text-xs text-blue-900 space-y-1">
+            <p class="font-bold"><i class="fa-solid fa-circle-info mr-1 text-blue-600"></i>免費跨裝置同步說明：</p>
+            <p>請前往 Google Firebase Console 建立免費專案並開啟 Firestore，直接將專案設定貼於下方即可自動完成連線！詳細步驟請參閱專案 `README.md` 指南。</p>
           </div>
-          <div class="flex justify-end space-x-2 pt-1">
-            <button type="button" @click="adminPasswordModal = false" class="px-3 py-1.5 border border-gray-300 rounded-lg text-xs font-medium text-gray-600 hover:bg-gray-50">
+
+          <div>
+            <div class="flex items-center justify-between mb-1">
+              <label class="block text-xs font-bold text-gray-700">快速貼上 firebaseConfig JSON 或 物件：</label>
+              <button @click="parseJsonConfig" class="text-[11px] text-blue-600 font-bold hover:underline">自動解析貼上內容</button>
+            </div>
+            <textarea v-model="rawConfigInput" rows="3" placeholder='例如：
+const firebaseConfig = {
+  apiKey: "AIzaSy...",
+  authDomain: "tuku-es.firebaseapp.com",
+  projectId: "tuku-es",
+  ...
+};' class="w-full p-2 border border-gray-300 rounded-lg text-xs font-mono bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
+          </div>
+
+          <div class="relative flex py-1 items-center">
+            <div class="flex-grow border-t border-gray-200"></div>
+            <span class="flex-shrink mx-3 text-gray-400 text-xs font-semibold">或手動輸入個別欄位</span>
+            <div class="flex-grow border-t border-gray-200"></div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3 text-xs">
+            <div>
+              <label class="block font-semibold text-gray-700 mb-1">apiKey *</label>
+              <input type="text" v-model="customFirebaseConfig.apiKey" placeholder="AIzaSy..." class="w-full px-2.5 py-1.5 border border-gray-300 rounded font-mono focus:outline-none focus:border-blue-500">
+            </div>
+            <div>
+              <label class="block font-semibold text-gray-700 mb-1">authDomain *</label>
+              <input type="text" v-model="customFirebaseConfig.authDomain" placeholder="xxx.firebaseapp.com" class="w-full px-2.5 py-1.5 border border-gray-300 rounded font-mono focus:outline-none focus:border-blue-500">
+            </div>
+            <div>
+              <label class="block font-semibold text-gray-700 mb-1">projectId *</label>
+              <input type="text" v-model="customFirebaseConfig.projectId" placeholder="my-school-app" class="w-full px-2.5 py-1.5 border border-gray-300 rounded font-mono focus:outline-none focus:border-blue-500">
+            </div>
+            <div>
+              <label class="block font-semibold text-gray-700 mb-1">storageBucket</label>
+              <input type="text" v-model="customFirebaseConfig.storageBucket" placeholder="xxx.appspot.com" class="w-full px-2.5 py-1.5 border border-gray-300 rounded font-mono focus:outline-none focus:border-blue-500">
+            </div>
+            <div>
+              <label class="block font-semibold text-gray-700 mb-1">messagingSenderId</label>
+              <input type="text" v-model="customFirebaseConfig.messagingSenderId" placeholder="123456789" class="w-full px-2.5 py-1.5 border border-gray-300 rounded font-mono focus:outline-none focus:border-blue-500">
+            </div>
+            <div>
+              <label class="block font-semibold text-gray-700 mb-1">appId *</label>
+              <input type="text" v-model="customFirebaseConfig.appId" placeholder="1:123456:web:abcd" class="w-full px-2.5 py-1.5 border border-gray-300 rounded font-mono focus:outline-none focus:border-blue-500">
+            </div>
+          </div>
+
+          <p v-if="firebaseModalError" class="text-xs text-red-600 font-bold text-center bg-red-50 p-2 rounded">
+            {{ firebaseModalError }}
+          </p>
+        </div>
+
+        <div class="bg-gray-50 px-6 py-3 border-t border-gray-100 flex items-center justify-between">
+          <button @click="clearFirebaseConfig" class="px-3 py-1.5 border border-red-300 text-red-600 hover:bg-red-50 rounded-lg text-xs font-medium transition">
+            清除設定 (回歸本機儲存)
+          </button>
+          <div class="flex space-x-2">
+            <button @click="activeFirebaseModal = false" class="px-3 py-1.5 border border-gray-300 text-gray-600 hover:bg-gray-100 rounded-lg text-xs font-medium transition">
               取消
             </button>
-            <button type="submit" class="px-4 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-xs font-bold shadow">
-              驗證並繼續
+            <button @click="saveFirebaseConfig" class="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold shadow transition">
+              儲存並連接雲端
             </button>
           </div>
-        </form>
+        </div>
       </div>
     </div>
 
@@ -675,9 +735,25 @@
         const activeDetailModal = ref(false);
         const activeFormModal = ref(false);
         const activeDeleteModal = ref(false);
+        const activeFirebaseModal = ref(false);
+        const firebaseModalError = ref('');
+        const rawConfigInput = ref('');
+        const customFirebaseConfig = ref({
+          apiKey: '',
+          authDomain: '',
+          projectId: '',
+          storageBucket: '',
+          messagingSenderId: '',
+          appId: ''
+        });
+
         const isEditMode = ref(false);
         const selectedEvent = ref({});
         const eventToDelete = ref(null);
+
+        // Local Storage persistence keys
+        const LOCAL_STORAGE_KEY = 'tuku_school_calendar_events_v1';
+        const FIREBASE_CONFIG_KEY = 'tuku_firebase_custom_config_v1';
 
         // Admin Auth State & Management Password (2140)
         const isAdmin = ref(false);
@@ -685,9 +761,6 @@
         const inputPassword = ref('');
         const passwordError = ref('');
         let pendingAdminAction = null;
-
-        // Local Storage persistence key and fallback helpers
-        const LOCAL_STORAGE_KEY = 'tuku_school_calendar_events_v1';
 
         const loadLocalEvents = () => {
           try {
@@ -773,27 +846,66 @@
           { id: '611', title: '下學期開學日', startDate: '2027-02-11', endDate: '2027-02-11', department: '全校', categoryId: 'admin', description: '115 學年度第二學期開學日（正式上課）' }
         ];
 
+        const seedInitialData = async () => {
+          if (!eventsColRef || !db) return;
+          try {
+            const batch = writeBatch(db);
+            defaultEvents.forEach(evt => {
+              const docRef = doc(eventsColRef, evt.id);
+              batch.set(docRef, evt);
+            });
+            await batch.commit();
+          } catch (err) {
+            console.error("Error seeding initial data to Firestore:", err);
+          }
+        };
+
         // Load persisted events from Local Storage first, fallback to default schedule
         const savedEvents = loadLocalEvents();
         const events = ref(savedEvents || [...defaultEvents]);
 
         onMounted(async () => {
+          await initFirebaseConnection();
+        });
+
+        const initFirebaseConnection = async () => {
           try {
             const appId = typeof __app_id !== 'undefined' ? __app_id : 'tuku-calendar-app';
-            const firebaseConfigRaw = typeof __firebase_config !== 'undefined' ? __firebase_config : null;
+            
+            // Priority 1: Check user-saved localStorage config
+            let firebaseConfig = null;
+            const userSavedConfig = localStorage.getItem(FIREBASE_CONFIG_KEY);
+            
+            if (userSavedConfig) {
+              try {
+                firebaseConfig = JSON.parse(userSavedConfig);
+                customFirebaseConfig.value = { ...customFirebaseConfig.value, ...firebaseConfig };
+              } catch (e) {
+                console.warn("Invalid saved firebase config:", e);
+              }
+            }
 
-            if (!firebaseConfigRaw) {
-              console.log("獨立/離線運作模式（使用本地儲存持久化）");
+            // Priority 2: Fallback to platform injected __firebase_config
+            if (!firebaseConfig && typeof __firebase_config !== 'undefined' && __firebase_config) {
+              try {
+                firebaseConfig = JSON.parse(__firebase_config);
+              } catch (e) {
+                console.warn("Invalid injected firebase config:", e);
+              }
+            }
+
+            if (!firebaseConfig || !firebaseConfig.apiKey || !firebaseConfig.projectId) {
+              console.log("未檢測到有效 Firebase 金鑰，啟用本機 LocalStorage 安全儲存模式");
               syncStatus.value = 'offline';
               return;
             }
 
-            const firebaseConfig = JSON.parse(firebaseConfigRaw);
-            const app = initializeApp(firebaseConfig);
+            syncStatus.value = 'syncing';
+            const app = initializeApp(firebaseConfig, 'dynamicApp_' + Date.now());
             auth = getAuth(app);
             db = getFirestore(app);
 
-            // Step 1: Authenticate with custom token or anonymously with fallback
+            // Step 1: Authenticate with custom token or anonymously
             let userCredential = null;
             try {
               if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
@@ -802,7 +914,6 @@
                 userCredential = await signInAnonymously(auth);
               }
             } catch (authErr) {
-              console.warn("Custom token login failed, falling back to anonymous auth:", authErr);
               userCredential = await signInAnonymously(auth);
             }
 
@@ -813,15 +924,14 @@
             }
             currentUserId.value = user.uid;
 
-            // Step 2: Reference public collection path (RULE 1)
+            // Step 2: Collection path (RULE 1)
             eventsColRef = collection(db, 'artifacts', appId, 'public', 'data', 'events');
 
-            // Step 3: Listen to Firestore real-time updates (RULE 2 - simple query)
+            // Step 3: Listen to Firestore real-time updates (RULE 2)
             onSnapshot(eventsColRef, async (snapshot) => {
               syncStatus.value = 'synced';
               
               if (snapshot.empty) {
-                // First-time load: Seed initial default schedule to cloud database
                 await seedInitialData();
               } else {
                 const cloudEvents = [];
@@ -841,25 +951,75 @@
             syncStatus.value = 'offline';
             eventsColRef = null;
           }
-        });
+        };
 
-        // Helper to seed initial calendar data to cloud database
-        const seedInitialData = async () => {
-          if (!eventsColRef) return;
-          syncStatus.value = 'syncing';
-          try {
-            const batch = writeBatch(db);
-            defaultEvents.forEach(evt => {
-              const docRef = doc(eventsColRef, evt.id);
-              batch.set(docRef, evt);
-            });
-            await batch.commit();
-            syncStatus.value = 'synced';
-            saveLocalEvents(defaultEvents);
-          } catch (e) {
-            console.error("Failed to seed initial data:", e);
-            syncStatus.value = 'error';
+        const openFirebaseModal = () => {
+          firebaseModalError.value = '';
+          rawConfigInput.value = '';
+          const saved = localStorage.getItem(FIREBASE_CONFIG_KEY);
+          if (saved) {
+            try {
+              customFirebaseConfig.value = JSON.parse(saved);
+            } catch (e) {}
           }
+          activeFirebaseModal.value = true;
+        };
+
+        const parseJsonConfig = () => {
+          try {
+            const text = rawConfigInput.value;
+            const apiKeyMatch = text.match(/apiKey:\s*["']([^"']+)["']/);
+            const authDomainMatch = text.match(/authDomain:\s*["']([^"']+)["']/);
+            const projectIdMatch = text.match(/projectId:\s*["']([^"']+)["']/);
+            const storageBucketMatch = text.match(/storageBucket:\s*["']([^"']+)["']/);
+            const messagingSenderIdMatch = text.match(/messagingSenderId:\s*["']([^"']+)["']/);
+            const appIdMatch = text.match(/appId:\s*["']([^"']+)["']/);
+
+            if (apiKeyMatch) customFirebaseConfig.value.apiKey = apiKeyMatch[1];
+            if (authDomainMatch) customFirebaseConfig.value.authDomain = authDomainMatch[1];
+            if (projectIdMatch) customFirebaseConfig.value.projectId = projectIdMatch[1];
+            if (storageBucketMatch) customFirebaseConfig.value.storageBucket = storageBucketMatch[1];
+            if (messagingSenderIdMatch) customFirebaseConfig.value.messagingSenderId = messagingSenderIdMatch[1];
+            if (appIdMatch) customFirebaseConfig.value.appId = appIdMatch[1];
+
+            // If it's standard JSON
+            if (!apiKeyMatch && text.trim().startsWith('{')) {
+              const parsed = JSON.parse(text);
+              if (parsed.apiKey) customFirebaseConfig.value.apiKey = parsed.apiKey;
+              if (parsed.authDomain) customFirebaseConfig.value.authDomain = parsed.authDomain;
+              if (parsed.projectId) customFirebaseConfig.value.projectId = parsed.projectId;
+              if (parsed.storageBucket) customFirebaseConfig.value.storageBucket = parsed.storageBucket;
+              if (parsed.messagingSenderId) customFirebaseConfig.value.messagingSenderId = parsed.messagingSenderId;
+              if (parsed.appId) customFirebaseConfig.value.appId = parsed.appId;
+            }
+
+            firebaseModalError.value = '解析成功！已填充相關欄位，請點擊「儲存並連接雲端」。';
+          } catch (e) {
+            firebaseModalError.value = '無法自動解析輸入內容，請直接在下方欄位手動填寫。';
+          }
+        };
+
+        const saveFirebaseConfig = async () => {
+          const cfg = customFirebaseConfig.value;
+          if (!cfg.apiKey || !cfg.projectId || !cfg.authDomain) {
+            firebaseModalError.value = '請至少填寫 apiKey, authDomain 與 projectId 欄位！';
+            return;
+          }
+          try {
+            localStorage.setItem(FIREBASE_CONFIG_KEY, JSON.stringify(cfg));
+            activeFirebaseModal.value = false;
+            await initFirebaseConnection();
+          } catch (e) {
+            firebaseModalError.value = '儲存失敗：' + e.message;
+          }
+        };
+
+        const clearFirebaseConfig = async () => {
+          localStorage.removeItem(FIREBASE_CONFIG_KEY);
+          customFirebaseConfig.value = { apiKey: '', authDomain: '', projectId: '', storageBucket: '', messagingSenderId: '', appId: '' };
+          activeFirebaseModal.value = false;
+          syncStatus.value = 'offline';
+          eventsColRef = null;
         };
 
         const resetToDefaultData = async () => {
@@ -1297,20 +1457,6 @@
           });
         }
 
-        function openEditModal(evt) {
-          isEditMode.value = true;
-          formEvent.value = { ...evt };
-          activeDetailModal.value = false;
-          pushHistoryState('editModal');
-          activeFormModal.value = true;
-        }
-
-        function confirmDelete(evt) {
-          eventToDelete.value = evt;
-          activeDetailModal.value = false;
-          activeDeleteModal.value = true;
-        }
-
         // Category & Utility Helpers
         const allCategoriesSelected = computed(() => selectedCategoryIds.value.length === categories.value.length);
         
@@ -1379,14 +1525,14 @@
           searchQuery,
           syncStatus,
           currentUserId,
-          isAdmin,
-          adminPasswordModal,
-          inputPassword,
-          passwordError,
-          verifyPassword,
-          toggleAdminAuth,
-          resetToDefaultData,
-          activeDetailModal,
+          activeFirebaseModal,
+          firebaseModalError,
+          rawConfigInput,
+          customFirebaseConfig,
+          openFirebaseModal,
+          parseJsonConfig,
+          saveFirebaseConfig,
+          clearFirebaseConfig,
           activeFormModal,
           activeDeleteModal,
           isEditMode,
