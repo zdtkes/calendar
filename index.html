@@ -79,6 +79,12 @@
               {{ m.label }}
             </option>
           </select>
+
+          <!-- Back to Today Button -->
+          <button @click="goToToday" 
+                  class="px-3 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 text-xs font-semibold rounded-lg transition flex items-center gap-1">
+            <i class="fa-solid fa-location-crosshairs"></i> 回今天
+          </button>
         </div>
 
         <!-- Add Event Button (Admin Protected) -->
@@ -98,6 +104,9 @@
             <i class="fa-solid fa-calendar text-blue-600"></i>
             {{ getMonthLabel(selectedMonth) }}
           </h2>
+          <span class="text-xs text-slate-500 bg-white px-2.5 py-1 rounded-md border border-slate-200">
+            今天日期：<strong class="text-blue-600">{{ todayStr }}</strong>
+          </span>
         </div>
 
         <div class="grid grid-cols-7 gap-px bg-slate-200 text-center font-semibold text-xs text-slate-600">
@@ -112,13 +121,18 @@
 
         <div class="grid grid-cols-7 gap-px bg-slate-200">
           <div v-for="(day, idx) in calendarGrid" :key="idx" 
-               class="min-h-[100px] bg-white p-1.5 flex flex-col justify-start transition hover:bg-blue-50/30"
-               :class="{'opacity-40 bg-slate-50': !day.isCurrentMonth}">
+               class="min-h-[110px] bg-white p-1.5 flex flex-col justify-start transition relative"
+               :class="{
+                 'opacity-40 bg-slate-50': !day.isCurrentMonth,
+                 'ring-2 ring-blue-500 ring-inset bg-blue-50/40 z-10': day.isToday
+               }">
+            
             <div class="flex justify-between items-center mb-1">
-              <span class="text-xs font-bold px-1.5 py-0.5 rounded-full"
-                    :class="day.isToday ? 'bg-blue-600 text-white' : 'text-slate-600'">
+              <span class="text-xs font-bold px-1.5 py-0.5 rounded-full flex items-center justify-center min-w-[22px] min-h-[22px]"
+                    :class="day.isToday ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-600'">
                 {{ day.dateNum }}
               </span>
+              <span v-if="day.isToday" class="text-[10px] font-bold text-blue-600 bg-blue-100 px-1 rounded">今天</span>
             </div>
             
             <div class="space-y-1 overflow-y-auto max-h-[85px] text-left">
@@ -135,7 +149,7 @@
 
       <!-- List View -->
       <div v-else class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-        <div class="p-4 border-b border-slate-200 bg-slate-50">
+        <div class="p-4 border-b border-slate-200 bg-slate-50 flex justify-between items-center">
           <h2 class="font-bold text-slate-700 flex items-center gap-2">
             <i class="fa-solid fa-list-check text-blue-600"></i>
             行程列表 (共 {{ filteredEvents.length }} 項)
@@ -144,14 +158,18 @@
 
         <div class="divide-y divide-slate-100">
           <div v-for="evt in filteredEvents" :key="evt.id" 
-               class="p-4 hover:bg-slate-50 transition flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+               class="p-4 hover:bg-slate-50 transition flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+               :class="{'bg-blue-50/30': isEventToday(evt)}">
             <div class="flex items-start gap-3">
               <span class="px-2.5 py-1 text-xs font-semibold rounded-md whitespace-nowrap mt-0.5"
                     :class="getCategoryBadgeStyle(evt.category)">
                 {{ evt.category || '一般' }}
               </span>
               <div>
-                <h3 class="font-bold text-slate-800 text-base">{{ evt.title }}</h3>
+                <div class="flex items-center gap-2">
+                  <h3 class="font-bold text-slate-800 text-base">{{ evt.title }}</h3>
+                  <span v-if="isEventToday(evt)" class="px-1.5 py-0.5 bg-blue-100 text-blue-700 text-[10px] font-bold rounded">今天進行中</span>
+                </div>
                 <p class="text-xs text-slate-500 mt-0.5 flex items-center gap-2">
                   <span><i class="fa-regular fa-clock"></i> {{ evt.startDate }} ~ {{ evt.endDate }}</span>
                   <span v-if="evt.location"><i class="fa-solid fa-location-dot"></i> {{ evt.location }}</span>
@@ -272,7 +290,7 @@
     import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
     import { getFirestore, collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, writeBatch, getDocs } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-    // 內建專屬雲端設定（寫死於專案中，部署至 GitHub Pages 後直接免輸入全自動同步）
+    // 內建專屬雲端設定
     const DEFAULT_FIREBASE_CONFIG = {
       apiKey: "AIzaSyDRNURwHBCvq-M7R1h4l8hzkqLB8ca7IOI",
       authDomain: "tuku-es-calendar.firebaseapp.com",
@@ -281,6 +299,23 @@
       messagingSenderId: "701380711220",
       appId: "1:701380711220:web:9d0a86152893cdd0e70b61"
     };
+
+    // 115 學年度預設行事曆資料 (2026/08 - 2027/02)
+    const DEFAULT_INITIAL_EVENTS = [
+      { title: "全校教職員工準備會議", startDate: "2026-08-25", endDate: "2026-08-25", category: "教務", description: "上午 09:00 於視聽教室開會" },
+      { title: "115學年度第一學期開學日", startDate: "2026-08-31", endDate: "2026-08-31", category: "全校", description: "正式上課、發放課本與學用品" },
+      { title: "全校班親會 / 家長會", startDate: "2026-09-11", endDate: "2026-09-11", category: "輔導", description: "晚上 19:00 於各班教室" },
+      { title: "國家防災日地震演練", startDate: "2026-09-21", endDate: "2026-09-21", category: "學務", description: "上午 09:21 全校進行疏散演練" },
+      { title: "中秋節放假", startDate: "2026-09-25", endDate: "2026-09-25", category: "全校", description: "國定假日放假一天" },
+      { title: "國慶日調整放假", startDate: "2026-10-09", endDate: "2026-10-09", category: "全校", description: "國定假日放假一天" },
+      { title: "期中定期評量 (段考)", startDate: "2026-11-03", endDate: "2026-11-04", category: "教務", description: "全校一至六年級期中考" },
+      { title: "高年級校外教學 (畢業旅行)", startDate: "2026-11-19", endDate: "2026-11-20", category: "學務", description: "六年級校外參訪活動" },
+      { title: "土庫國小校慶運動會", startDate: "2026-12-12", endDate: "2026-12-12", category: "全校", description: "全校師生及家長共同參與運動會" },
+      { title: "運動會補假一天", startDate: "2026-12-14", endDate: "2026-12-14", category: "全校", description: "全校補假一天" },
+      { title: "期末定期評量 (段考)", startDate: "2027-01-14", endDate: "2027-01-15", category: "教務", description: "全校一至六年級期末考" },
+      { title: "休業式 (第一學期結束)", startDate: "2027-01-20", endDate: "2027-01-20", category: "全校", description: "發放成績單與休業式" },
+      { title: "115學年度寒假開始", startDate: "2027-01-21", endDate: "2027-02-10", category: "全校", description: "學生寒假期間" }
+    ];
 
     const { createApp, ref, computed, onMounted } = Vue;
 
@@ -292,7 +327,14 @@
         const passwordError = ref(false);
 
         const currentView = ref('month');
-        const selectedMonth = ref('all');
+        
+        // 取得今日日期 (YYYY-MM-DD 與 YYYY-MM)
+        const now = new Date();
+        const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+        const currentYearMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+        
+        // 預設切換至今日所屬月份
+        const selectedMonth = ref(currentYearMonth);
         const events = ref([]);
 
         const syncStatus = ref({
@@ -310,6 +352,21 @@
         let db = null;
         let unsubscribe = null;
 
+        // 寫入預設行程至雲端 Firestore
+        const seedInitialDataToCloud = async (firestoreDb) => {
+          try {
+            const batch = writeBatch(firestoreDb);
+            const eventsRef = collection(firestoreDb, 'events');
+            DEFAULT_INITIAL_EVENTS.forEach(evt => {
+              const newDocRef = doc(eventsRef);
+              batch.set(newDocRef, evt);
+            });
+            await batch.commit();
+          } catch (err) {
+            console.error("Error seeding cloud data:", err);
+          }
+        };
+
         // 初始化 Firebase 自動同步
         const initFirebase = async () => {
           try {
@@ -319,7 +376,12 @@
             db = getFirestore(app);
 
             const eventsRef = collection(db, 'events');
-            unsubscribe = onSnapshot(eventsRef, (snapshot) => {
+            unsubscribe = onSnapshot(eventsRef, async (snapshot) => {
+              if (snapshot.empty) {
+                // 資料庫為空時自動載入並寫入預設行事曆
+                await seedInitialDataToCloud(db);
+                return;
+              }
               const loadedEvents = [];
               snapshot.forEach((doc) => {
                 loadedEvents.push({ id: doc.id, ...doc.data() });
@@ -328,7 +390,7 @@
               syncStatus.value = { connected: true, message: '🟢 雲端同步中' };
             }, (error) => {
               console.warn("Firestore error:", error);
-              syncStatus.value = { connected: false, message: '雲端連線異常 (切換至本機模式)' };
+              syncStatus.value = { connected: false, message: '雲端連線異常 (本機模式)' };
               loadLocalEvents();
             });
           } catch (err) {
@@ -341,12 +403,29 @@
         const loadLocalEvents = () => {
           const stored = localStorage.getItem('tuku_calendar_events');
           if (stored) {
-            try { events.value = JSON.parse(stored); } catch (e) { events.value = []; }
+            try { 
+              const parsed = JSON.parse(stored);
+              events.value = parsed.length > 0 ? parsed : DEFAULT_INITIAL_EVENTS;
+            } catch (e) { 
+              events.value = DEFAULT_INITIAL_EVENTS; 
+            }
+          } else {
+            events.value = DEFAULT_INITIAL_EVENTS;
+            saveLocalEvents();
           }
         };
 
         const saveLocalEvents = () => {
           localStorage.setItem('tuku_calendar_events', JSON.stringify(events.value));
+        };
+
+        const goToToday = () => {
+          selectedMonth.value = currentYearMonth;
+          currentView.value = 'month';
+        };
+
+        const isEventToday = (evt) => {
+          return evt.startDate <= todayStr && evt.endDate >= todayStr;
         };
 
         // 權限與密碼登入
@@ -379,7 +458,7 @@
             show: true,
             isEdit: false,
             readonly: false,
-            data: { id: '', title: '', startDate: new Date().toISOString().slice(0, 10), endDate: new Date().toISOString().slice(0, 10), category: '教務', description: '' }
+            data: { id: '', title: '', startDate: todayStr, endDate: todayStr, category: '教務', description: '' }
           };
         };
 
@@ -471,9 +550,8 @@
         });
 
         const calendarGrid = computed(() => {
-          // 月曆網格計算邏輯
           const grid = [];
-          const targetMonth = selectedMonth.value === 'all' ? '2026-08' : selectedMonth.value;
+          const targetMonth = selectedMonth.value === 'all' ? currentYearMonth : selectedMonth.value;
           const [year, month] = targetMonth.split('-').map(Number);
           
           const firstDay = new Date(year, month - 1, 1);
@@ -482,7 +560,7 @@
           const startDayOfWeek = firstDay.getDay();
           const totalDays = lastDay.getDate();
 
-          // 補前一個月的空位
+          // 前月空位
           for (let i = 0; i < startDayOfWeek; i++) {
             grid.push({ dateNum: '', isCurrentMonth: false, events: [] });
           }
@@ -491,11 +569,13 @@
           for (let d = 1; d <= totalDays; d++) {
             const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
             const dayEvts = events.value.filter(e => e.startDate <= dateStr && e.endDate >= dateStr);
+            const isToday = dateStr === todayStr;
+
             grid.push({
               dateNum: d,
               dateStr,
               isCurrentMonth: true,
-              isToday: false,
+              isToday,
               events: dayEvts
             });
           }
@@ -547,7 +627,10 @@
           confirmDelete,
           getCategoryStyle,
           getCategoryBadgeStyle,
-          syncStatus
+          syncStatus,
+          todayStr,
+          goToToday,
+          isEventToday
         };
       }
     }).mount('#app');
