@@ -593,10 +593,7 @@
           </div>
         </div>
 
-      </div>
-    </div>
-
-    <!-- EVENT DETAIL MODAL (Notice: Delete button removed as per requirements) -->
+    <!-- EVENT DETAIL MODAL -->
     <div v-if="activeDetailModal" class="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-gray-900/50 backdrop-blur-2xs">
       <div class="bg-white rounded-t-2xl sm:rounded-xl shadow-2xl w-full max-w-lg overflow-hidden border border-gray-100 animate-slide-up sm:animate-none">
         
@@ -609,6 +606,9 @@
           <div class="flex items-center space-x-1">
             <button @click="openEditModal(selectedEvent)" class="p-2 hover:bg-black/20 rounded-lg transition" title="編輯">
               <i class="fa-solid fa-pen-to-square"></i>
+            </button>
+            <button @click="confirmDeleteEvent(selectedEvent)" class="p-2 hover:bg-black/20 hover:text-red-200 rounded-lg transition" title="刪除">
+              <i class="fa-solid fa-trash-can"></i>
             </button>
             <button @click="activeDetailModal = false" class="p-2 hover:bg-black/20 rounded-lg transition" title="關閉">
               <i class="fa-solid fa-xmark text-lg"></i>
@@ -727,13 +727,21 @@
                       class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"></textarea>
           </div>
 
-          <div class="pt-2 flex justify-end space-x-2">
-            <button type="button" @click="activeFormModal = false" class="px-4 py-2 border border-gray-300 rounded-lg text-xs sm:text-sm font-medium text-gray-700 hover:bg-gray-50">
-              取消
+          <div class="pt-2 flex items-center justify-between">
+            <button v-if="isEditMode" type="button" @click="confirmDeleteEvent(formEvent)" class="px-3 py-2 bg-red-50 text-red-600 hover:bg-red-100 border border-red-200 rounded-lg text-xs font-medium transition flex items-center space-x-1">
+              <i class="fa-solid fa-trash-can text-xs"></i>
+              <span>刪除此活動</span>
             </button>
-            <button type="submit" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs sm:text-sm font-medium shadow-xs">
-              儲存
-            </button>
+            <div v-else></div>
+            
+            <div class="flex space-x-2">
+              <button type="button" @click="activeFormModal = false" class="px-4 py-2 border border-gray-300 rounded-lg text-xs sm:text-sm font-medium text-gray-700 hover:bg-gray-50">
+                取消
+              </button>
+              <button type="submit" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs sm:text-sm font-medium shadow-xs">
+                儲存
+              </button>
+            </div>
           </div>
         </form>
       </div>
@@ -847,7 +855,7 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
     import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-    import { getFirestore, doc, collection, onSnapshot, setDoc, writeBatch } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+    import { getFirestore, doc, collection, onSnapshot, setDoc, deleteDoc, writeBatch } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
     const { createApp, ref, computed, onMounted } = Vue;
 
@@ -1530,6 +1538,38 @@
           });
         }
 
+        function confirmDeleteEvent(evt) {
+          requireAdmin(() => {
+            if (confirm(`確定要刪除「${evt.title}」這項活動嗎？`)) {
+              deleteEvent(evt);
+            }
+          });
+        }
+
+        async function deleteEvent(evt) {
+          if (!evt || !evt.id) return;
+          syncStatus.value = 'syncing';
+
+          events.value = events.value.filter(e => e.id !== evt.id);
+          saveLocalEvents(events.value);
+
+          if (eventsColRef) {
+            try {
+              const docRef = doc(eventsColRef, evt.id);
+              await deleteDoc(docRef);
+              syncStatus.value = 'synced';
+            } catch (err) {
+              console.error("Error deleting event from Cloud:", err);
+              syncStatus.value = 'error';
+            }
+          } else {
+            syncStatus.value = 'synced';
+          }
+
+          activeDetailModal.value = false;
+          activeFormModal.value = false;
+        }
+
         const allCategoriesSelected = computed(() => selectedCategoryIds.value.length === categories.value.length);
         
         function toggleAllCategories() {
@@ -1648,6 +1688,8 @@
           viewEventDetailsFromDayModal,
           openAddModal,
           openEditModal,
+          confirmDeleteEvent,
+          deleteEvent,
           saveEvent,
           allCategoriesSelected,
           toggleAllCategories,
