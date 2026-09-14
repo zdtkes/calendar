@@ -126,7 +126,7 @@
             'bg-red-500': syncStatus === 'error'
           }"></span>
           <span class="text-gray-600 font-semibold">
-            {{ syncStatus === 'synced' ? '雲端同步中' : (syncStatus === 'syncing' ? '同步處理中...' : '本機儲存 (點擊設定雲端)') }}
+            {{ syncStatus === 'synced' ? '雲端同步中' : (syncStatus === 'syncing' ? '同步處理中...' : (syncStatus === 'error' ? '權限不足 (已使用本機儲存)' : '本機儲存 (點擊設定雲端)')) }}
           </span>
           <i class="fa-solid fa-gear text-gray-400 hover:text-blue-600 text-xs ml-1"></i>
         </button>
@@ -670,6 +670,19 @@
             <p>請前往 Google Firebase Console 建立免費專案並開啟 Firestore，直接將專案設定貼於下方即可自動完成連線！詳細步驟請參閱專案 `README.md` 指南。</p>
           </div>
 
+          <div v-if="syncStatus === 'error'" class="bg-red-50 border border-red-200 text-red-700 p-3 rounded-lg text-xs space-y-1">
+            <p class="font-bold"><i class="fa-solid fa-triangle-exclamation mr-1"></i>Firestore 權限不足 (Missing or insufficient permissions)</p>
+            <p>請至 Firebase Console -> Firestore Database -> <strong>Rules (規則)</strong>，將規則修改為：</p>
+            <pre class="bg-red-100 p-2 rounded text-[11px] font-mono select-all overflow-x-auto">rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if true;
+    }
+  }
+}</pre>
+          </div>
+
           <div>
             <div class="flex items-center justify-between mb-1">
               <label class="block text-xs font-bold text-gray-700">快速貼上 firebaseConfig JSON 或 物件：</label>
@@ -943,19 +956,17 @@ const firebaseConfig = {
             try {
               if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
                 userCredential = await signInWithCustomToken(auth, __initial_auth_token);
-              } else {
+              } else if (!auth.currentUser) {
                 userCredential = await signInAnonymously(auth);
               }
             } catch (authErr) {
-              userCredential = await signInAnonymously(auth);
+              console.warn("Auth initial check warning:", authErr);
             }
 
-            const user = userCredential.user;
-            if (!user) {
-              syncStatus.value = 'offline';
-              return;
+            const user = auth.currentUser || (userCredential ? userCredential.user : null);
+            if (user) {
+              currentUserId.value = user.uid;
             }
-            currentUserId.value = user.uid;
 
             // Step 2: Collection path (RULE 1)
             eventsColRef = collection(db, 'artifacts', appId, 'public', 'data', 'events');
@@ -975,8 +986,9 @@ const firebaseConfig = {
                 saveLocalEvents(cloudEvents);
               }
             }, (err) => {
-              console.error("Firestore sync error:", err);
-              syncStatus.value = 'offline';
+              console.warn("Firestore sync warning (falling back to LocalStorage):", err);
+              syncStatus.value = 'error';
+              firebaseModalError.value = 'Firestore 存取權限不足。請至 Firebase Console 調整 Rules 允許讀寫權限。';
             });
 
           } catch (err) {
