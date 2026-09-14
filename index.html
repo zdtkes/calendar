@@ -2,7 +2,7 @@
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>彰化縣土庫國小 115 學年度上學期行事曆</title>
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -37,10 +37,25 @@
     }
     body {
       font-family: 'Inter', 'Noto Sans TC', sans-serif;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+    }
+    /* Prevent iOS input auto-zoom */
+    @media (max-width: 639px) {
+      input, select, textarea {
+        font-size: 16px !important;
+      }
+    }
+    /* Safe Area Insets for modern mobile notched devices */
+    .pb-safe {
+      padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+    }
+    .pt-safe {
+      padding-top: max(0.75rem, env(safe-area-inset-top));
     }
     .custom-scrollbar::-webkit-scrollbar {
-      width: 6px;
-      height: 6px;
+      width: 4px;
+      height: 4px;
     }
     .custom-scrollbar::-webkit-scrollbar-track {
       background: #f1f5f9;
@@ -49,119 +64,111 @@
       background: #cbd5e1;
       border-radius: 4px;
     }
-    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-      background: #94a3b8;
-    }
     .calendar-grid {
       display: grid;
       grid-template-columns: repeat(7, minmax(0, 1fr));
     }
-    .event-truncate {
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
+    /* Smooth Bottom Sheet Animation */
+    @keyframes slideUp {
+      from { transform: translateY(100%); }
+      to { transform: translateY(0); }
+    }
+    .animate-slide-up {
+      animation: slideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
     }
   </style>
 </head>
-<body class="bg-gray-50 text-gray-800 antialiased h-screen overflow-hidden flex flex-col">
+<body class="bg-gray-50 text-gray-800 antialiased h-screen overflow-hidden flex flex-col select-none sm:select-auto">
   <div id="app" class="h-full flex flex-col overflow-hidden" v-cloak>
     
     <!-- Top Header Navigation -->
-    <header class="bg-white border-b border-gray-200 px-4 py-2.5 flex items-center justify-between shadow-sm z-20 flex-shrink-0">
-      <div class="flex items-center space-x-3">
-        <button @click="sidebarOpen = !sidebarOpen" class="p-2 text-gray-600 hover:bg-gray-100 rounded-full transition lg:hidden" title="切換選單">
+    <header class="bg-white border-b border-gray-200 px-3 sm:px-4 py-2 sm:py-2.5 flex items-center justify-between shadow-xs z-20 flex-shrink-0 pt-safe">
+      <div class="flex items-center space-x-2 sm:space-x-3">
+        <button @click="sidebarOpen = !sidebarOpen" class="p-2 -ml-1 text-gray-600 hover:bg-gray-100 active:bg-gray-200 rounded-lg transition lg:hidden flex items-center justify-center w-10 h-10" title="開啟選單與篩選">
           <i class="fa-solid fa-bars text-lg"></i>
         </button>
         <div class="flex items-center space-x-2">
-          <div class="w-9 h-9 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold text-xl shadow">
+          <div class="w-8 h-8 sm:w-9 sm:h-9 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold text-lg sm:text-xl shadow-xs">
             土
           </div>
-          <div class="hidden sm:block">
-            <h1 class="text-base font-bold text-gray-800 leading-tight">土庫國小行事曆</h1>
-            <p class="text-xs text-gray-500">115 學年度上學期 (2026/08 - 2027/02)</p>
+          <div>
+            <h1 class="text-sm sm:text-base font-bold text-gray-800 leading-tight truncate max-w-[140px] xs:max-w-[180px] sm:max-w-none">土庫國小行事曆</h1>
+            <p class="text-[10px] sm:text-xs text-gray-500 hidden xs:block">115 學年度上學期</p>
           </div>
         </div>
       </div>
 
-      <!-- Navigation & Today Controls -->
-      <div class="flex items-center space-x-2 sm:space-x-4">
-        <!-- Back to Month button when in Day/Agenda mode on Mobile -->
-        <button v-if="currentView !== 'month'" @click="switchView('month')" class="flex items-center space-x-1 px-2.5 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-md text-xs sm:text-sm font-medium transition">
-          <i class="fa-solid fa-arrow-left"></i>
-          <span>返回月曆</span>
+      <!-- Navigation & Date Title Controls -->
+      <div class="flex items-center space-x-1 sm:space-x-3">
+        <button @click="goToToday" class="px-2.5 py-1.5 border border-blue-500 bg-blue-50 text-blue-700 rounded-lg text-xs font-bold hover:bg-blue-100 active:bg-blue-200 transition shadow-2xs flex items-center space-x-1">
+          <i class="fa-solid fa-calendar-day text-xs"></i>
+          <span>今天</span>
         </button>
-
-        <button @click="goToToday" class="px-3 py-1.5 border border-blue-500 bg-blue-50 text-blue-700 rounded-md text-sm font-bold hover:bg-blue-100 transition shadow-sm flex items-center space-x-1">
-          <i class="fa-solid fa-calendar-day"></i>
-          <span>回到今天</span>
-        </button>
-        <div class="flex items-center space-x-1">
-          <button @click="navigatePrev" class="p-2 hover:bg-gray-100 rounded-full text-gray-600 transition" title="上一期">
-            <i class="fa-solid fa-chevron-left text-sm"></i>
+        <div class="flex items-center">
+          <button @click="navigatePrev" class="w-8 h-8 sm:w-9 sm:h-9 hover:bg-gray-100 active:bg-gray-200 rounded-full text-gray-600 transition flex items-center justify-center" title="上一期">
+            <i class="fa-solid fa-chevron-left text-xs sm:text-sm"></i>
           </button>
-          <button @click="navigateNext" class="p-2 hover:bg-gray-100 rounded-full text-gray-600 transition" title="下一期">
-            <i class="fa-solid fa-chevron-right text-sm"></i>
+          <h2 class="text-xs sm:text-lg font-bold text-gray-800 min-w-[90px] sm:min-w-[130px] text-center truncate">
+            {{ currentPeriodTitle }}
+          </h2>
+          <button @click="navigateNext" class="w-8 h-8 sm:w-9 sm:h-9 hover:bg-gray-100 active:bg-gray-200 rounded-full text-gray-600 transition flex items-center justify-center" title="下一期">
+            <i class="fa-solid fa-chevron-right text-xs sm:text-sm"></i>
           </button>
         </div>
-        <h2 class="text-base sm:text-xl font-bold text-gray-800 min-w-[130px] text-center">
-          {{ currentPeriodTitle }}
-        </h2>
       </div>
 
-      <div class="flex items-center space-x-2 sm:space-x-3">
-        <!-- Search Input -->
-        <div class="relative hidden md:block w-48 lg:w-64">
+      <div class="flex items-center space-x-1.5 sm:space-x-3">
+        <!-- Search Input (Desktop) -->
+        <div class="relative hidden md:block w-48 lg:w-60">
           <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
           <input type="text" v-model="searchQuery" @input="onSearchInput" placeholder="搜尋全學期活動..."
-                 class="w-full pl-9 pr-3 py-1.5 bg-gray-100 border border-transparent rounded-lg text-sm focus:bg-white focus:border-blue-500 focus:outline-none transition">
-          <button v-if="searchQuery" @click="clearSearch" class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                 class="w-full pl-9 pr-7 py-1.5 bg-gray-100 border border-transparent rounded-lg text-sm focus:bg-white focus:border-blue-500 focus:outline-none transition">
+          <button v-if="searchQuery" @click="clearSearch" class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-1">
             <i class="fa-solid fa-xmark text-xs"></i>
           </button>
         </div>
 
-        <!-- Cloud Sync Status Badge -->
+        <!-- Cloud Sync Badge (Desktop/Tablet) -->
         <button @click="openFirebaseModal" 
                 class="hidden lg:flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 hover:bg-blue-50 border border-gray-200 transition cursor-pointer"
-                title="點擊查看/更換 Firebase 雲端金鑰">
+                title="查看/更換 Firebase 金鑰">
           <span class="w-2 h-2 rounded-full" :class="{
             'bg-green-500 animate-pulse': syncStatus === 'synced',
             'bg-amber-500 animate-spin': syncStatus === 'syncing',
             'bg-blue-500': syncStatus === 'offline',
             'bg-red-500': syncStatus === 'error'
           }"></span>
-          <span class="text-gray-600 font-semibold">
-            {{ syncStatusText }}
-          </span>
+          <span class="text-gray-600 font-semibold">{{ syncStatusText }}</span>
           <i class="fa-solid fa-gear text-gray-400 hover:text-blue-600 text-xs ml-1"></i>
         </button>
 
-        <!-- View Switcher -->
-        <div class="hidden sm:flex bg-gray-100 p-1 rounded-lg border border-gray-200 text-xs sm:text-sm font-medium">
-          <button @click="switchView('month')" :class="{'bg-white shadow-sm text-blue-600 font-semibold': currentView === 'month', 'text-gray-600 hover:text-gray-900': currentView !== 'month'}" class="px-2.5 py-1 rounded-md transition">月曆</button>
-          <button @click="switchView('week')" :class="{'bg-white shadow-sm text-blue-600 font-semibold': currentView === 'week', 'text-gray-600 hover:text-gray-900': currentView !== 'week'}" class="px-2.5 py-1 rounded-md transition">週視圖</button>
-          <button @click="switchView('day')" :class="{'bg-white shadow-sm text-blue-600 font-semibold': currentView === 'day', 'text-gray-600 hover:text-gray-900': currentView !== 'day'}" class="px-2.5 py-1 rounded-md transition">日檢視</button>
-          <button @click="switchView('agenda')" :class="{'bg-white shadow-sm text-blue-600 font-semibold': currentView === 'agenda', 'text-gray-600 hover:text-gray-900': currentView !== 'agenda'}" class="px-2.5 py-1 rounded-md transition">列表預告</button>
+        <!-- View Switcher (Desktop) -->
+        <div class="hidden sm:flex bg-gray-100 p-1 rounded-lg border border-gray-200 text-xs font-medium">
+          <button @click="switchView('month')" :class="{'bg-white shadow-2xs text-blue-600 font-bold': currentView === 'month', 'text-gray-600 hover:text-gray-900': currentView !== 'month'}" class="px-2.5 py-1 rounded-md transition">月曆</button>
+          <button @click="switchView('week')" :class="{'bg-white shadow-2xs text-blue-600 font-bold': currentView === 'week', 'text-gray-600 hover:text-gray-900': currentView !== 'week'}" class="px-2.5 py-1 rounded-md transition">週視圖</button>
+          <button @click="switchView('day')" :class="{'bg-white shadow-2xs text-blue-600 font-bold': currentView === 'day', 'text-gray-600 hover:text-gray-900': currentView !== 'day'}" class="px-2.5 py-1 rounded-md transition">日檢視</button>
+          <button @click="switchView('agenda')" :class="{'bg-white shadow-2xs text-blue-600 font-bold': currentView === 'agenda', 'text-gray-600 hover:text-gray-900': currentView !== 'agenda'}" class="px-2.5 py-1 rounded-md transition">列表預告</button>
         </div>
 
-        <!-- Admin Status / Unlock Button -->
+        <!-- Admin Auth Button -->
         <button @click="toggleAdminAuth" :class="isAdmin ? 'bg-amber-100 text-amber-800 border-amber-300' : 'bg-gray-100 text-gray-600 border-gray-300 hover:bg-gray-200'" class="flex items-center space-x-1 px-2.5 py-1.5 border rounded-lg text-xs font-medium transition">
           <i class="fa-solid" :class="isAdmin ? 'fa-lock-open text-amber-600' : 'fa-lock'"></i>
-          <span class="hidden sm:inline">{{ isAdmin ? '管理員已驗證' : '管理員登入' }}</span>
+          <span class="hidden md:inline">{{ isAdmin ? '管理員已驗證' : '管理登入' }}</span>
         </button>
 
-        <!-- Add Event Button -->
-        <button @click="openAddModal()" class="flex items-center space-x-1 bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg shadow font-medium text-sm transition">
+        <!-- Add Event Button (Desktop) -->
+        <button @click="openAddModal()" class="hidden sm:flex items-center space-x-1 bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg shadow-xs font-medium text-xs sm:text-sm transition">
           <i class="fa-solid fa-plus text-xs"></i>
-          <span class="hidden sm:inline">新增活動</span>
+          <span>新增</span>
         </button>
       </div>
     </header>
 
     <!-- Global Search Banner Alert -->
-    <div v-if="searchQuery" class="bg-amber-50 border-b border-amber-200 px-4 py-2 flex items-center justify-between text-xs sm:text-sm text-amber-900 z-10">
-      <div class="flex items-center space-x-2 truncate">
-        <i class="fa-solid fa-magnifying-glass text-amber-600"></i>
-        <span>搜尋「<strong>{{ searchQuery }}</strong>」結果：共 <strong>{{ filteredEvents.length }}</strong> 項跨月份活動（點擊項目可跳轉至該日期）</span>
+    <div v-if="searchQuery" class="bg-amber-50 border-b border-amber-200 px-3 sm:px-4 py-2 flex items-center justify-between text-xs text-amber-900 z-10">
+      <div class="flex items-center space-x-1.5 truncate">
+        <i class="fa-solid fa-magnifying-glass text-amber-600 flex-shrink-0"></i>
+        <span class="truncate">搜尋「<strong>{{ searchQuery }}</strong>」結果：共 <strong>{{ filteredEvents.length }}</strong> 項</span>
       </div>
       <button @click="clearSearch" class="ml-2 text-amber-700 hover:text-amber-950 font-bold underline flex-shrink-0 text-xs">
         清除搜尋
@@ -169,50 +176,59 @@
     </div>
 
     <!-- Main Content Body -->
-    <div class="flex flex-1 overflow-hidden relative pb-14 md:pb-0">
-      <!-- Sidebar / Left Panel -->
+    <div class="flex flex-1 overflow-hidden relative pb-16 sm:pb-0">
+      
+      <!-- Sidebar / Left Drawer Panel -->
       <aside :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'"
-             class="fixed lg:static inset-y-0 left-0 z-30 w-72 bg-white border-r border-gray-200 flex flex-col transition-transform duration-300 ease-in-out shadow-lg lg:shadow-none flex-shrink-0">
+             class="fixed lg:static inset-y-0 left-0 z-40 w-72 xs:w-80 lg:w-72 bg-white border-r border-gray-200 flex flex-col transition-transform duration-300 ease-in-out shadow-xl lg:shadow-none flex-shrink-0">
         
-        <div class="p-4 flex flex-col space-y-5 overflow-y-auto custom-scrollbar flex-1">
+        <div class="p-4 flex items-center justify-between border-b border-gray-100 lg:hidden">
+          <span class="font-bold text-gray-800 text-base"><i class="fa-solid fa-sliders text-blue-600 mr-2"></i>篩選與設定</span>
+          <button @click="sidebarOpen = false" class="p-2 text-gray-500 hover:bg-gray-100 rounded-lg">
+            <i class="fa-solid fa-xmark text-lg"></i>
+          </button>
+        </div>
+
+        <div class="p-4 flex flex-col space-y-5 overflow-y-auto custom-scrollbar flex-1 pb-20 sm:pb-4">
           
           <!-- Mobile Search Input inside drawer -->
           <div class="block md:hidden">
+            <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">關鍵字搜尋</label>
             <div class="relative w-full">
               <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
               <input type="text" v-model="searchQuery" @input="onSearchInput" placeholder="搜尋全學期活動..."
                      class="w-full pl-9 pr-8 py-2 bg-gray-100 border border-transparent rounded-lg text-sm focus:bg-white focus:border-blue-500 focus:outline-none">
-              <button v-if="searchQuery" @click="clearSearch" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
+              <button v-if="searchQuery" @click="clearSearch" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 p-1">
                 <i class="fa-solid fa-xmark text-sm"></i>
               </button>
             </div>
           </div>
 
-          <!-- Quick Today Status Card -->
-          <div class="bg-blue-600 text-white rounded-xl p-3.5 shadow-sm space-y-1">
+          <!-- Quick Today Card -->
+          <div class="bg-blue-600 text-white rounded-xl p-3.5 shadow-xs space-y-1">
             <div class="flex items-center justify-between text-xs opacity-90">
-              <span><i class="fa-solid fa-clock mr-1"></i>本日日期定位</span>
+              <span><i class="fa-solid fa-clock mr-1"></i>今日日期</span>
               <span class="bg-white/20 px-2 py-0.5 rounded font-mono font-bold">Today</span>
             </div>
-            <div class="text-base font-bold pt-1">
+            <div class="text-sm sm:text-base font-bold pt-0.5">
               {{ todayFormattedDisplay }}
             </div>
-            <button @click="goToToday" class="w-full mt-2 py-1 bg-white text-blue-700 rounded-lg text-xs font-bold hover:bg-blue-50 transition shadow-xs">
-              快速跳回今天月曆
+            <button @click="goToToday(); sidebarOpen = false;" class="w-full mt-2 py-1.5 bg-white text-blue-700 rounded-lg text-xs font-bold hover:bg-blue-50 active:bg-blue-100 transition shadow-2xs">
+              跳回今天月曆
             </button>
           </div>
 
-          <!-- Event Categories Filter -->
+          <!-- Category Filter -->
           <div>
             <div class="flex items-center justify-between mb-2">
-              <h3 class="text-xs font-bold text-gray-500 uppercase tracking-wider">活動分類篩選</h3>
-              <button @click="toggleAllCategories" class="text-[11px] text-blue-600 hover:underline">
+              <h3 class="text-xs font-bold text-gray-500 uppercase tracking-wider">分類篩選</h3>
+              <button @click="toggleAllCategories" class="text-xs text-blue-600 hover:underline">
                 {{ allCategoriesSelected ? '全部取消' : '全選' }}
               </button>
             </div>
-            <div class="space-y-1.5">
-              <label v-for="cat in categories" :key="cat.id" class="flex items-center space-x-2 text-xs font-medium text-gray-700 hover:bg-gray-50 p-1.5 rounded cursor-pointer transition">
-                <input type="checkbox" :value="cat.id" v-model="selectedCategoryIds" class="rounded text-blue-600 focus:ring-blue-500 h-3.5 w-3.5">
+            <div class="space-y-1">
+              <label v-for="cat in categories" :key="cat.id" class="flex items-center space-x-2.5 text-xs font-medium text-gray-700 hover:bg-gray-50 active:bg-gray-100 p-2 rounded-lg cursor-pointer transition">
+                <input type="checkbox" :value="cat.id" v-model="selectedCategoryIds" class="rounded text-blue-600 focus:ring-blue-500 h-4 w-4">
                 <span class="w-3 h-3 rounded-full flex-shrink-0" :style="{ backgroundColor: cat.bgColor }"></span>
                 <span class="flex-1 truncate">{{ cat.name }}</span>
                 <span class="text-[10px] bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded-full font-mono">
@@ -222,50 +238,48 @@
             </div>
           </div>
 
-          <!-- Department / Offices Filter -->
+          <!-- Department Filter -->
           <div>
-            <h3 class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">承辦處室單位</h3>
-            <div class="space-y-1">
-              <label v-for="dept in departments" :key="dept" class="flex items-center space-x-2 text-xs font-medium text-gray-700 hover:bg-gray-50 p-1 rounded cursor-pointer">
-                <input type="checkbox" :value="dept" v-model="selectedDepartments" class="rounded text-blue-600 focus:ring-blue-500 h-3.5 w-3.5">
-                <span>{{ dept }}</span>
+            <h3 class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">承辦單位</h3>
+            <div class="grid grid-cols-2 gap-1">
+              <label v-for="dept in departments" :key="dept" class="flex items-center space-x-2 text-xs font-medium text-gray-700 hover:bg-gray-50 p-2 rounded-lg cursor-pointer">
+                <input type="checkbox" :value="dept" v-model="selectedDepartments" class="rounded text-blue-600 focus:ring-blue-500 h-4 w-4">
+                <span class="truncate">{{ dept }}</span>
               </label>
             </div>
           </div>
 
-          <!-- Key Semester Milestones Summary Box -->
-          <div class="bg-blue-50 border border-blue-100 rounded-lg p-3 text-xs text-blue-900 space-y-1.5">
+          <!-- Milestones Summary -->
+          <div class="bg-blue-50 border border-blue-100 rounded-xl p-3 text-xs text-blue-900 space-y-1.5">
             <div class="font-bold flex items-center text-blue-800">
-              <i class="fa-solid fa-star text-amber-500 mr-1.5"></i> 學期重要期程
+              <i class="fa-solid fa-star text-amber-500 mr-1.5"></i> 學期重點行程
             </div>
             <p><strong class="text-blue-950">期中評量：</strong>115/11/04 - 11/05</p>
             <p><strong class="text-blue-950">校慶運動會：</strong>115/11/12</p>
             <p><strong class="text-blue-950">期末評量：</strong>116/01/13 - 01/14</p>
             <p><strong class="text-blue-950">休業式典禮：</strong>116/01/19</p>
-            <p><strong class="text-blue-950">寒假戶外露營：</strong>116/01/26 - 01/27</p>
+            <p><strong class="text-blue-950">戶外露營：</strong>116/01/26 - 01/27</p>
           </div>
 
-          <!-- Cloud Synchronization Info & Data Control -->
-          <div class="border-t border-gray-200 pt-3 mt-2 text-xs space-y-2 text-gray-500">
+          <!-- Cloud Sync & Reset -->
+          <div class="border-t border-gray-200 pt-3 text-xs space-y-2 text-gray-500">
             <div class="flex items-center justify-between">
-              <span class="font-bold text-gray-600"><i class="fa-solid fa-cloud mr-1 text-blue-600"></i>跨裝置雲端同步</span>
-              <button @click="openFirebaseModal" class="px-2 py-0.5 rounded text-[11px] font-bold bg-blue-100 hover:bg-blue-200 text-blue-700 transition">
-                <i class="fa-solid fa-sliders mr-1"></i>金鑰設定
+              <span class="font-bold text-gray-600"><i class="fa-solid fa-cloud mr-1 text-blue-600"></i>雲端資料庫</span>
+              <button @click="openFirebaseModal" class="px-2 py-1 rounded text-xs font-bold bg-blue-100 hover:bg-blue-200 text-blue-700 transition">
+                金鑰設定
               </button>
             </div>
-            <p class="text-[10px] text-gray-500 truncate font-mono">專案: tuku-es-calendar</p>
-            <p v-if="currentUserId" class="text-[10px] font-mono truncate text-gray-400">裝置 ID: {{ currentUserId }}</p>
-            <button @click="resetToDefaultData" class="w-full py-1.5 px-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded text-xs transition flex items-center justify-center space-x-1">
+            <button @click="resetToDefaultData" class="w-full py-2 px-2 bg-gray-100 hover:bg-gray-200 active:bg-gray-300 text-gray-700 rounded-lg text-xs transition flex items-center justify-center space-x-1">
               <i class="fa-solid fa-rotate-left"></i>
-              <span>重新匯入預設預排行程</span>
+              <span>重置為預設行事曆</span>
             </button>
           </div>
 
         </div>
       </aside>
 
-      <!-- Overlay for mobile sidebar -->
-      <div v-if="sidebarOpen" @click="sidebarOpen = false" class="fixed inset-0 bg-gray-900 bg-opacity-40 z-20 lg:hidden"></div>
+      <!-- Overlay for Mobile Sidebar -->
+      <div v-if="sidebarOpen" @click="sidebarOpen = false" class="fixed inset-0 bg-gray-900/40 backdrop-blur-2xs z-30 lg:hidden"></div>
 
       <!-- Right Main Workspace -->
       <main class="flex-1 flex flex-col bg-white overflow-hidden">
@@ -273,14 +287,14 @@
         <!-- MONTH VIEW -->
         <div v-if="currentView === 'month'" class="flex-1 flex flex-col h-full overflow-hidden">
           <!-- Weekday Headers -->
-          <div class="calendar-grid border-b border-gray-200 bg-gray-50 text-center text-xs font-bold text-gray-500 py-2">
-            <span class="text-red-500">週日</span>
-            <span>週一</span>
-            <span>週二</span>
-            <span>週三</span>
-            <span>週四</span>
-            <span>週五</span>
-            <span class="text-blue-500">週六</span>
+          <div class="calendar-grid border-b border-gray-200 bg-gray-50 text-center text-[11px] sm:text-xs font-bold text-gray-500 py-1.5 sm:py-2">
+            <span class="text-red-500">日</span>
+            <span>一</span>
+            <span>二</span>
+            <span>三</span>
+            <span>四</span>
+            <span>五</span>
+            <span class="text-blue-500">六</span>
           </div>
 
           <!-- Month Grid Cells -->
@@ -288,67 +302,83 @@
             <div v-for="(day, idx) in monthViewDays" :key="idx"
                  @click="handleDayClick(day.date)"
                  :class="[
-                   'border-b border-r border-gray-200 p-1 flex flex-col transition hover:bg-blue-50/50 min-h-[90px] group cursor-pointer relative',
+                   'border-b border-r border-gray-200 p-0.5 sm:p-1 flex flex-col transition active:bg-blue-100/60 min-h-[60px] sm:min-h-[90px] group cursor-pointer relative select-none',
                    !day.isCurrentMonth ? 'bg-gray-50/60 text-gray-400' : 'bg-white',
-                   day.isToday ? 'bg-blue-50/70 border-2 border-blue-400 ring-2 ring-blue-100 z-10' : ''
+                   day.isToday ? 'bg-blue-50/80 ring-2 ring-blue-500 ring-inset z-10' : ''
                  ]">
               
-              <!-- Date Header in Cell -->
-              <div class="flex items-center justify-between mb-1 px-1">
+              <!-- Date Header -->
+              <div class="flex items-center justify-between mb-0.5 px-0.5">
                 <span :class="[
-                  'text-xs font-bold w-6 h-6 flex items-center justify-center rounded-full',
-                  day.isToday ? 'bg-blue-600 text-white shadow-sm ring-2 ring-blue-200' : (day.isCurrentMonth ? 'text-gray-700' : 'text-gray-400')
+                  'text-[11px] sm:text-xs font-bold w-5 h-5 sm:w-6 sm:h-6 flex items-center justify-center rounded-full',
+                  day.isToday ? 'bg-blue-600 text-white shadow-xs' : (day.isCurrentMonth ? 'text-gray-700' : 'text-gray-400')
                 ]">
                   {{ day.dayNum }}
                 </span>
-                <span v-if="day.isToday" class="text-[10px] bg-blue-600 text-white px-1.5 py-0.5 rounded font-bold shadow-xs">今天</span>
-                <span v-else-if="day.events.length > 0" class="text-[10px] text-gray-400 font-mono group-hover:text-blue-600">
+                
+                <!-- Desktop Event Count Badge -->
+                <span v-if="day.events.length > 0" class="hidden sm:inline-block text-[10px] text-gray-400 font-mono">
                   {{ day.events.length }}項
                 </span>
               </div>
 
-              <!-- Events List inside cell -->
-              <div class="flex-1 overflow-y-auto space-y-1 custom-scrollbar max-h-[75px]">
+              <!-- Mobile Event Display (Dots & Count Pills) -->
+              <div class="flex sm:hidden flex-col items-center justify-center flex-1 space-y-1">
+                <div v-if="day.events.length > 0" class="flex flex-wrap items-center justify-center gap-1 px-0.5 max-w-full">
+                  <span v-for="evt in day.events.slice(0, 3)" :key="'m_'+evt.id"
+                        class="w-2 h-2 rounded-full flex-shrink-0"
+                        :style="{ backgroundColor: getCategoryColor(evt.categoryId) }"></span>
+                </div>
+                <span v-if="day.events.length > 0" class="text-[9px] font-bold text-gray-600 bg-gray-100 px-1 rounded">
+                  {{ day.events.length }}項
+                </span>
+              </div>
+
+              <!-- Desktop Event Cards inside cell -->
+              <div class="hidden sm:block flex-1 overflow-y-auto space-y-1 custom-scrollbar max-h-[75px]">
                 <div v-for="evt in day.events.slice(0, 3)" :key="evt.id"
                      @click.stop="viewEventDetails(evt)"
                      :style="{ backgroundColor: getCategoryBg(evt.categoryId), color: getCategoryTextColor(evt.categoryId) }"
-                     class="text-[11px] px-1.5 py-0.5 rounded font-medium truncate flex items-center justify-between shadow-xs hover:opacity-90 transition">
+                     class="text-[11px] px-1.5 py-0.5 rounded font-medium truncate flex items-center justify-between shadow-2xs hover:opacity-90 transition">
                   <span class="truncate">{{ evt.title }}</span>
                   <span v-if="evt.time" class="text-[9px] opacity-75 ml-1 flex-shrink-0">{{ evt.time }}</span>
                 </div>
-                <!-- Overflow counter -->
                 <div v-if="day.events.length > 3" class="text-[10px] font-bold text-blue-600 px-1 hover:underline">
-                  + 還有 {{ day.events.length - 3 }} 項 (點擊查看)
+                  + 還有 {{ day.events.length - 3 }} 項
                 </div>
               </div>
+
             </div>
           </div>
         </div>
 
-        <!-- WEEK VIEW -->
-        <div v-else-if="currentView === 'week'" class="flex-1 flex flex-col overflow-y-auto custom-scrollbar">
-          <div class="grid grid-cols-7 border-b border-gray-200 bg-gray-50 sticky top-0 z-10 text-center py-2 font-medium text-xs text-gray-600">
-            <div v-for="wDay in weekViewDays" :key="wDay.dateStr"
-                 :class="{'text-blue-600 font-bold': wDay.isToday}" class="p-1">
-              <div>{{ wDay.weekDayName }}</div>
-              <div :class="wDay.isToday ? 'bg-blue-600 text-white w-7 h-7 mx-auto rounded-full flex items-center justify-center mt-1 shadow' : 'text-sm font-bold mt-1'">
-                {{ wDay.dayNum }}
+        <!-- WEEK VIEW (Scrollable on Mobile) -->
+        <div v-else-if="currentView === 'week'" class="flex-1 flex flex-col overflow-x-auto overflow-y-auto custom-scrollbar bg-gray-50">
+          <div class="min-w-[640px] sm:min-w-full flex-1 flex flex-col">
+            <!-- Week Headers -->
+            <div class="grid grid-cols-7 border-b border-gray-200 bg-gray-50 sticky top-0 z-10 text-center py-2 font-medium text-xs text-gray-600">
+              <div v-for="wDay in weekViewDays" :key="wDay.dateStr"
+                   :class="{'text-blue-600 font-bold': wDay.isToday}" class="p-1">
+                <div>{{ wDay.weekDayName }}</div>
+                <div :class="wDay.isToday ? 'bg-blue-600 text-white w-7 h-7 mx-auto rounded-full flex items-center justify-center mt-1 shadow-xs' : 'text-sm font-bold mt-1'">
+                  {{ wDay.dayNum }}
+                </div>
               </div>
             </div>
-          </div>
 
-          <div class="grid grid-cols-7 flex-1 min-h-[500px] divide-x divide-gray-200 bg-white">
-            <div v-for="wDay in weekViewDays" :key="wDay.dateStr" 
-                 @click="handleDayClick(wDay.date)"
-                 class="p-2 space-y-2 hover:bg-gray-50/50 cursor-pointer">
-              <div v-for="evt in wDay.events" :key="evt.id"
-                   @click.stop="viewEventDetails(evt)"
-                   :style="{ borderLeftColor: getCategoryColor(evt.categoryId) }"
-                   class="p-2 rounded bg-gray-50 border-l-4 shadow-sm hover:shadow transition">
-                <div class="text-xs font-bold text-gray-800">{{ evt.title }}</div>
-                <div class="flex items-center space-x-1 text-[10px] text-gray-500 mt-1">
-                  <span v-if="evt.time" class="font-semibold"><i class="fa-regular fa-clock mr-0.5"></i>{{ evt.time }}</span>
-                  <span class="bg-gray-200 text-gray-700 px-1 rounded">{{ evt.department }}</span>
+            <!-- Week Day Columns -->
+            <div class="grid grid-cols-7 flex-1 min-h-[450px] divide-x divide-gray-200 bg-white">
+              <div v-for="wDay in weekViewDays" :key="wDay.dateStr" 
+                   @click="handleDayClick(wDay.date)"
+                   class="p-1.5 space-y-2 hover:bg-gray-50/50 cursor-pointer">
+                <div v-for="evt in wDay.events" :key="evt.id"
+                     @click.stop="viewEventDetails(evt)"
+                     :style="{ borderLeftColor: getCategoryColor(evt.categoryId) }"
+                     class="p-1.5 rounded bg-gray-50 border-l-4 shadow-2xs hover:shadow transition">
+                  <div class="text-xs font-bold text-gray-800 leading-tight truncate">{{ evt.title }}</div>
+                  <div class="flex items-center space-x-1 text-[10px] text-gray-500 mt-1">
+                    <span class="bg-gray-200 text-gray-700 px-1 rounded truncate">{{ evt.department }}</span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -356,48 +386,40 @@
         </div>
 
         <!-- DAY VIEW -->
-        <div v-else-if="currentView === 'day'" class="flex-1 p-4 md:p-6 overflow-y-auto custom-scrollbar bg-gray-50">
-          <div class="max-w-3xl mx-auto bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <div class="flex items-center justify-between border-b pb-4 mb-4">
-              <div class="flex items-center space-x-3">
-                <button @click="switchView('month')" class="p-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-gray-600 sm:hidden">
-                  <i class="fa-solid fa-arrow-left"></i>
-                </button>
-                <div>
-                  <h3 class="text-xl sm:text-2xl font-bold text-gray-900">{{ formatFullDate(selectedDate) }}</h3>
-                  <p class="text-xs sm:text-sm text-gray-500 mt-0.5">當日排定行程概覽</p>
-                </div>
+        <div v-else-if="currentView === 'day'" class="flex-1 p-3 sm:p-6 overflow-y-auto custom-scrollbar bg-gray-50">
+          <div class="max-w-3xl mx-auto bg-white rounded-xl shadow-xs border border-gray-200 p-4 sm:p-6">
+            <div class="flex items-center justify-between border-b pb-3 mb-4">
+              <div>
+                <h3 class="text-lg sm:text-2xl font-bold text-gray-900 leading-tight">{{ formatFullDate(selectedDate) }}</h3>
+                <p class="text-xs text-gray-500 mt-0.5">當日排定行程概覽</p>
               </div>
-              <button @click="openAddModal(selectedDateStr)" class="bg-blue-600 text-white px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium hover:bg-blue-700">
-                <i class="fa-solid fa-plus mr-1"></i> 新增活動
+              <button @click="openAddModal(selectedDateStr)" class="bg-blue-600 text-white px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-blue-700 transition">
+                <i class="fa-solid fa-plus mr-1"></i> 新增
               </button>
             </div>
 
             <div v-if="dayViewEvents.length === 0" class="text-center py-12 text-gray-400">
               <i class="fa-regular fa-calendar-xmark text-4xl mb-2"></i>
-              <p class="text-sm">本日無預定行事活動</p>
+              <p class="text-xs sm:text-sm">本日無預定行事活動</p>
             </div>
 
-            <div v-else class="space-y-3">
+            <div v-else class="space-y-2.5">
               <div v-for="evt in dayViewEvents" :key="evt.id"
                    @click="viewEventDetails(evt)"
-                   class="flex items-start p-4 bg-white border border-gray-200 rounded-lg shadow-sm hover:border-blue-300 transition cursor-pointer">
-                <div class="w-3 h-12 rounded-full mr-4 flex-shrink-0" :style="{ backgroundColor: getCategoryColor(evt.categoryId) }"></div>
-                <div class="flex-1">
+                   class="flex items-start p-3 sm:p-4 bg-white border border-gray-200 rounded-lg shadow-2xs hover:border-blue-300 transition cursor-pointer">
+                <div class="w-2.5 h-10 rounded-full mr-3 flex-shrink-0 mt-0.5" :style="{ backgroundColor: getCategoryColor(evt.categoryId) }"></div>
+                <div class="flex-1 min-w-0">
                   <div class="flex items-center justify-between">
-                    <h4 class="text-base font-bold text-gray-800">{{ evt.title }}</h4>
-                    <span class="text-xs px-2 py-0.5 rounded-full font-medium" :style="{ backgroundColor: getCategoryBg(evt.categoryId), color: getCategoryTextColor(evt.categoryId) }">
+                    <h4 class="text-sm sm:text-base font-bold text-gray-800 truncate">{{ evt.title }}</h4>
+                    <span class="text-[10px] sm:text-xs px-2 py-0.5 rounded font-medium flex-shrink-0 ml-2" :style="{ backgroundColor: getCategoryBg(evt.categoryId), color: getCategoryTextColor(evt.categoryId) }">
                       {{ getCategoryName(evt.categoryId) }}
                     </span>
                   </div>
-                  <div class="flex items-center space-x-3 text-xs text-gray-500 mt-2">
+                  <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-500 mt-1.5">
                     <span v-if="evt.time"><i class="fa-regular fa-clock mr-1"></i>{{ evt.time }}</span>
                     <span><i class="fa-solid fa-building-user mr-1"></i>{{ evt.department }}</span>
                     <span v-if="evt.location"><i class="fa-solid fa-location-dot mr-1"></i>{{ evt.location }}</span>
                   </div>
-                  <p v-if="evt.description" class="text-xs text-gray-600 mt-2 bg-gray-50 p-2 rounded">
-                    {{ evt.description }}
-                  </p>
                 </div>
               </div>
             </div>
@@ -405,76 +427,73 @@
         </div>
 
         <!-- AGENDA / LIST VIEW -->
-        <div v-else-if="currentView === 'agenda'" class="flex-1 p-4 md:p-6 overflow-y-auto custom-scrollbar bg-gray-50">
-          <div class="max-w-4xl mx-auto space-y-6">
+        <div v-else-if="currentView === 'agenda'" class="flex-1 p-3 sm:p-6 overflow-y-auto custom-scrollbar bg-gray-50">
+          <div class="max-w-4xl mx-auto space-y-4 sm:space-y-6">
             
-            <!-- Agenda Mode Header Toggle Banner -->
-            <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-200 flex flex-col sm:flex-row items-center justify-between gap-3">
+            <!-- Agenda Mode Toggle Banner -->
+            <div class="bg-white rounded-xl p-3 sm:p-4 shadow-2xs border border-gray-200 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
               <div>
-                <h3 class="text-base sm:text-lg font-bold text-gray-800 flex items-center">
+                <h3 class="text-sm sm:text-lg font-bold text-gray-800 flex items-center">
                   <i class="fa-solid fa-calendar-week text-blue-600 mr-2"></i>
                   {{ agendaFilterMode === 'twoWeeks' ? '當週與下一週預告行程' : '全學期所有預定行程' }}
                 </h3>
-                <p class="text-xs text-gray-500 mt-0.5">
+                <p class="text-[11px] sm:text-xs text-gray-500 mt-0.5">
                   {{ agendaSubtitleText }}
                 </p>
               </div>
 
-              <!-- Scope Switch Buttons -->
-              <div class="flex bg-gray-100 p-1 rounded-lg text-xs font-semibold self-stretch sm:self-auto">
+              <!-- Scope Buttons -->
+              <div class="flex bg-gray-100 p-1 rounded-lg text-xs font-semibold self-stretch">
                 <button @click="agendaFilterMode = 'twoWeeks'" 
-                        :class="agendaFilterMode === 'twoWeeks' ? 'bg-blue-600 text-white shadow-xs' : 'text-gray-600 hover:text-gray-900'"
-                        class="flex-1 sm:flex-initial px-3 py-1.5 rounded-md transition flex items-center justify-center space-x-1">
+                        :class="agendaFilterMode === 'twoWeeks' ? 'bg-blue-600 text-white shadow-2xs' : 'text-gray-600 hover:text-gray-900'"
+                        class="flex-1 px-2.5 py-1.5 rounded-md transition flex items-center justify-center space-x-1">
                   <i class="fa-solid fa-clock-rotate-left text-[11px]"></i>
-                  <span>當週及下週預告</span>
+                  <span>兩週預告</span>
                 </button>
                 <button @click="agendaFilterMode = 'all'" 
-                        :class="agendaFilterMode === 'all' ? 'bg-blue-600 text-white shadow-xs' : 'text-gray-600 hover:text-gray-900'"
-                        class="flex-1 sm:flex-initial px-3 py-1.5 rounded-md transition flex items-center justify-center space-x-1">
+                        :class="agendaFilterMode === 'all' ? 'bg-blue-600 text-white shadow-2xs' : 'text-gray-600 hover:text-gray-900'"
+                        class="flex-1 px-2.5 py-1.5 rounded-md transition flex items-center justify-center space-x-1">
                   <i class="fa-solid fa-list-check text-[11px]"></i>
-                  <span>全學期總覽</span>
+                  <span>全學期</span>
                 </button>
               </div>
             </div>
 
-            <div v-if="Object.keys(groupedAgendaEvents).length === 0" class="bg-white rounded-xl p-12 text-center text-gray-400 border border-gray-200 shadow-sm">
-              <i class="fa-regular fa-folder-open text-4xl mb-3 text-gray-300"></i>
-              <p class="text-sm font-medium">在指定範圍內未找到排定行程</p>
-              <button v-if="agendaFilterMode === 'twoWeeks'" @click="agendaFilterMode = 'all'" class="mt-3 text-xs text-blue-600 font-bold hover:underline">
-                點此切換為全學期查看
+            <div v-if="Object.keys(groupedAgendaEvents).length === 0" class="bg-white rounded-xl p-8 sm:p-12 text-center text-gray-400 border border-gray-200 shadow-2xs">
+              <i class="fa-regular fa-folder-open text-3xl sm:text-4xl mb-2 text-gray-300"></i>
+              <p class="text-xs sm:text-sm font-medium">指定範圍內未找到行程</p>
+              <button v-if="agendaFilterMode === 'twoWeeks'" @click="agendaFilterMode = 'all'" class="mt-2 text-xs text-blue-600 font-bold hover:underline">
+                切換為全學期查看
               </button>
             </div>
 
-            <div v-else class="space-y-4">
-              <div v-for="(group, dateKey) in groupedAgendaEvents" :key="dateKey" class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                <!-- Group Date Header -->
-                <div class="bg-gray-100/90 px-4 py-2.5 border-b border-gray-200 flex items-center justify-between">
-                  <button @click="jumpToDateAndDetail(dateKey)" class="font-bold text-sm text-blue-700 hover:underline flex items-center">
-                    <i class="fa-regular fa-calendar-days mr-2 text-blue-600"></i>{{ formatDateWithWeekName(dateKey) }}
-                    <span class="ml-2 text-xs font-normal text-gray-500">（點擊進入日檢視）</span>
+            <div v-else class="space-y-3 sm:space-y-4">
+              <div v-for="(group, dateKey) in groupedAgendaEvents" :key="dateKey" class="bg-white rounded-xl shadow-2xs border border-gray-200 overflow-hidden">
+                <!-- Date Header -->
+                <div class="bg-gray-100/90 px-3 sm:px-4 py-2 border-b border-gray-200 flex items-center justify-between">
+                  <button @click="jumpToDateAndDetail(dateKey)" class="font-bold text-xs sm:text-sm text-blue-700 hover:underline flex items-center truncate">
+                    <i class="fa-regular fa-calendar-days mr-1.5 text-blue-600 flex-shrink-0"></i>
+                    <span class="truncate">{{ formatDateWithWeekName(dateKey) }}</span>
                   </button>
-                  <span class="text-xs bg-blue-100 text-blue-800 px-2.5 py-0.5 rounded-full font-semibold font-mono">{{ group.length }} 項活動</span>
+                  <span class="text-[10px] sm:text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full font-semibold font-mono flex-shrink-0 ml-1">{{ group.length }} 項</span>
                 </div>
 
-                <!-- Group Events -->
+                <!-- Events List -->
                 <div class="divide-y divide-gray-100">
                   <div v-for="evt in group" :key="evt.id"
                        @click="jumpToEventDate(evt)"
-                       class="p-3.5 hover:bg-blue-50/40 flex items-center justify-between cursor-pointer transition">
-                    <div class="flex items-center space-x-3 min-w-0 flex-1">
+                       class="p-3 hover:bg-blue-50/40 active:bg-blue-100/40 flex items-center justify-between cursor-pointer transition">
+                    <div class="flex items-center space-x-2.5 min-w-0 flex-1">
                       <span class="w-2.5 h-2.5 rounded-full flex-shrink-0" :style="{ backgroundColor: getCategoryColor(evt.categoryId) }"></span>
                       <div class="truncate">
-                        <span class="font-semibold text-sm text-gray-800 mr-2">{{ evt.title }}</span>
-                        <span class="text-xs text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded border border-gray-200">{{ evt.department }}</span>
+                        <span class="font-semibold text-xs sm:text-sm text-gray-800 mr-2">{{ evt.title }}</span>
+                        <span class="text-[10px] text-gray-500 bg-gray-100 px-1 rounded border border-gray-200">{{ evt.department }}</span>
                       </div>
                     </div>
                     
-                    <div class="flex items-center space-x-3 text-xs text-gray-500 flex-shrink-0 ml-2">
-                      <span v-if="evt.time" class="font-mono text-gray-600 bg-gray-50 px-2 py-0.5 rounded hidden sm:inline"><i class="fa-regular fa-clock mr-1"></i>{{ evt.time }}</span>
-                      <span class="hidden sm:inline px-2 py-0.5 rounded font-medium" :style="{ backgroundColor: getCategoryBg(evt.categoryId), color: getCategoryTextColor(evt.categoryId) }">
-                        {{ getCategoryName(evt.categoryId) }}
-                      </span>
-                      <i class="fa-solid fa-chevron-right text-gray-300"></i>
+                    <div class="flex items-center space-x-2 text-xs text-gray-500 flex-shrink-0 ml-2">
+                      <span v-if="evt.time" class="font-mono text-[11px] text-gray-600 bg-gray-50 px-1.5 py-0.5 rounded hidden sm:inline">{{ evt.time }}</span>
+                      <i class="fa-solid fa-chevron-right text-gray-300 text-xs"></i>
                     </div>
                   </div>
                 </div>
@@ -486,145 +505,159 @@
       </main>
     </div>
 
-    <!-- MOBILE BOTTOM NAVIGATION BAR -->
-    <div class="fixed bottom-0 inset-x-0 bg-white border-t border-gray-200 flex items-center justify-around py-2 z-20 md:hidden shadow-lg">
-      <button @click="switchView('month')" :class="currentView === 'month' ? 'text-blue-600 font-bold' : 'text-gray-500'" class="flex flex-col items-center text-xs">
+    <!-- ENHANCED MOBILE BOTTOM NAVIGATION BAR -->
+    <nav class="fixed bottom-0 inset-x-0 bg-white border-t border-gray-200 flex items-center justify-around py-1.5 z-30 md:hidden shadow-lg pb-safe">
+      <button @click="switchView('month')" :class="currentView === 'month' ? 'text-blue-600 font-bold' : 'text-gray-500'" class="flex flex-col items-center justify-center w-16 py-1 text-[10px] active:scale-95 transition">
         <i class="fa-regular fa-calendar-days text-base mb-0.5"></i>
         <span>月曆</span>
       </button>
-      <button @click="switchView('agenda')" :class="currentView === 'agenda' ? 'text-blue-600 font-bold' : 'text-gray-500'" class="flex flex-col items-center text-xs">
-        <i class="fa-solid fa-list-ul text-base mb-0.5"></i>
-        <span>預告列表</span>
+
+      <button @click="switchView('week')" :class="currentView === 'week' ? 'text-blue-600 font-bold' : 'text-gray-500'" class="flex flex-col items-center justify-center w-16 py-1 text-[10px] active:scale-95 transition">
+        <i class="fa-solid fa-calendar-week text-base mb-0.5"></i>
+        <span>週視圖</span>
       </button>
-      <button @click="toggleSidebarMobile()" :class="sidebarOpen ? 'text-blue-600 font-bold' : 'text-gray-500'" class="flex flex-col items-center text-xs">
+
+      <button @click="openAddModal()" class="flex flex-col items-center justify-center w-14 active:scale-90 transition">
+        <div class="w-10 h-10 bg-blue-600 text-white rounded-full flex items-center justify-center shadow-md -mt-4">
+          <i class="fa-solid fa-plus text-base"></i>
+        </div>
+        <span class="text-[10px] text-blue-600 font-bold mt-0.5">新增</span>
+      </button>
+
+      <button @click="switchView('agenda')" :class="currentView === 'agenda' ? 'text-blue-600 font-bold' : 'text-gray-500'" class="flex flex-col items-center justify-center w-16 py-1 text-[10px] active:scale-95 transition">
+        <i class="fa-solid fa-list-ul text-base mb-0.5"></i>
+        <span>預告</span>
+      </button>
+
+      <button @click="toggleSidebarMobile()" :class="sidebarOpen ? 'text-blue-600 font-bold' : 'text-gray-500'" class="flex flex-col items-center justify-center w-16 py-1 text-[10px] active:scale-95 transition">
         <i class="fa-solid fa-sliders text-base mb-0.5"></i>
         <span>篩選</span>
       </button>
-      <button @click="openAddModal()" class="flex flex-col items-center text-xs text-blue-600 font-bold">
-        <div class="w-7 h-7 bg-blue-600 text-white rounded-full flex items-center justify-center -mt-2 shadow">
-          <i class="fa-solid fa-plus text-xs"></i>
-        </div>
-        <span class="mt-0.5">新增</span>
-      </button>
-    </div>
+    </nav>
 
-    <!-- DAY EVENTS SUMMARY QUICK MODAL -->
-    <div v-if="activeDayModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/50 backdrop-blur-xs">
-      <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden border border-gray-100 flex flex-col max-h-[85vh]">
-        <!-- Day Modal Header -->
-        <div class="bg-blue-600 px-6 py-4 flex items-center justify-between text-white">
+    <!-- DAY SUMMARY MODAL (Mobile Bottom Sheet Friendly) -->
+    <div v-if="activeDayModal" class="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-gray-900/50 backdrop-blur-2xs">
+      <div class="bg-white rounded-t-2xl sm:rounded-xl shadow-2xl w-full max-w-lg overflow-hidden border border-gray-100 flex flex-col max-h-[85vh] animate-slide-up sm:animate-none">
+        
+        <!-- Mobile Bottom Sheet HandleBar -->
+        <div class="w-12 h-1 bg-gray-300 rounded-full mx-auto my-2 sm:hidden"></div>
+
+        <!-- Header -->
+        <div class="bg-blue-600 px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between text-white">
           <div>
-            <h3 class="text-lg font-bold leading-tight">{{ formatFullDate(selectedDate) }}</h3>
-            <p class="text-xs text-blue-100 mt-0.5">當日預定行事活動總覽 (共 {{ dayViewEvents.length }} 項)</p>
+            <h3 class="text-base sm:text-lg font-bold leading-tight">{{ formatFullDate(selectedDate) }}</h3>
+            <p class="text-xs text-blue-100 mt-0.5">當日活動概覽 (共 {{ dayViewEvents.length }} 項)</p>
           </div>
-          <button @click="activeDayModal = false" class="p-1 hover:bg-white/20 rounded-lg transition">
-            <i class="fa-solid fa-xmark text-xl"></i>
+          <button @click="activeDayModal = false" class="p-1.5 hover:bg-white/20 rounded-lg transition">
+            <i class="fa-solid fa-xmark text-lg"></i>
           </button>
         </div>
 
-        <!-- Day Events List -->
-        <div class="p-6 overflow-y-auto custom-scrollbar flex-1 space-y-3">
-          <div v-if="dayViewEvents.length === 0" class="text-center py-10 text-gray-400">
-            <i class="fa-regular fa-calendar-check text-4xl mb-2 text-gray-300"></i>
-            <p class="text-sm font-medium">本日尚未排定任何活動</p>
+        <!-- Content -->
+        <div class="p-4 sm:p-6 overflow-y-auto custom-scrollbar flex-1 space-y-2.5">
+          <div v-if="dayViewEvents.length === 0" class="text-center py-8 text-gray-400">
+            <i class="fa-regular fa-calendar-check text-3xl mb-2 text-gray-300"></i>
+            <p class="text-xs sm:text-sm font-medium">本日尚未排定任何活動</p>
           </div>
 
-          <div v-else class="space-y-3">
+          <div v-else class="space-y-2">
             <div v-for="evt in dayViewEvents" :key="evt.id"
                  @click="viewEventDetailsFromDayModal(evt)"
-                 class="p-3.5 bg-gray-50 hover:bg-blue-50/50 border border-gray-200 rounded-lg shadow-2xs hover:border-blue-300 transition cursor-pointer flex items-start space-x-3">
+                 class="p-3 bg-gray-50 hover:bg-blue-50/50 active:bg-blue-100/50 border border-gray-200 rounded-lg shadow-2xs transition cursor-pointer flex items-start space-x-2.5">
               <div class="w-2.5 h-10 rounded-full flex-shrink-0 mt-0.5" :style="{ backgroundColor: getCategoryColor(evt.categoryId) }"></div>
               <div class="flex-1 min-w-0">
                 <div class="flex items-center justify-between">
-                  <h4 class="text-sm font-bold text-gray-800 truncate">{{ evt.title }}</h4>
-                  <span class="text-[11px] px-2 py-0.5 rounded font-medium flex-shrink-0 ml-2" :style="{ backgroundColor: getCategoryBg(evt.categoryId), color: getCategoryTextColor(evt.categoryId) }">
+                  <h4 class="text-xs sm:text-sm font-bold text-gray-800 truncate">{{ evt.title }}</h4>
+                  <span class="text-[10px] px-1.5 py-0.5 rounded font-medium flex-shrink-0 ml-1" :style="{ backgroundColor: getCategoryBg(evt.categoryId), color: getCategoryTextColor(evt.categoryId) }">
                     {{ getCategoryName(evt.categoryId) }}
                   </span>
                 </div>
-                <div class="flex items-center space-x-3 text-xs text-gray-500 mt-1.5">
+                <div class="flex items-center space-x-2 text-[11px] text-gray-500 mt-1">
                   <span v-if="evt.time"><i class="fa-regular fa-clock mr-1"></i>{{ evt.time }}</span>
                   <span><i class="fa-solid fa-building-user mr-1"></i>{{ evt.department }}</span>
-                  <span v-if="evt.location"><i class="fa-solid fa-location-dot mr-1"></i>{{ evt.location }}</span>
                 </div>
               </div>
             </div>
           </div>
         </div>
 
-        <!-- Day Modal Footer -->
-        <div class="bg-gray-50 px-6 py-3 border-t border-gray-100 flex items-center justify-between">
-          <button @click="openAddModal(selectedDateStr); activeDayModal = false;" class="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold transition flex items-center space-x-1">
-            <i class="fa-solid fa-plus"></i>
-            <span>新增本日活動</span>
+        <!-- Footer -->
+        <div class="bg-gray-50 px-4 sm:px-6 py-3 border-t border-gray-100 flex items-center justify-between pb-safe">
+          <button @click="openAddModal(selectedDateStr); activeDayModal = false;" class="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold transition flex items-center space-x-1">
+            <i class="fa-solid fa-plus text-xs"></i>
+            <span>新增活動</span>
           </button>
           <div class="flex space-x-2">
-            <button @click="switchView('day'); activeDayModal = false;" class="px-3 py-1.5 border border-gray-300 hover:bg-gray-200 text-gray-700 rounded-lg text-xs font-medium transition">
-              切換至日檢視
+            <button @click="switchView('day'); activeDayModal = false;" class="px-3 py-2 border border-gray-300 hover:bg-gray-200 text-gray-700 rounded-lg text-xs font-medium transition">
+              日檢視
             </button>
-            <button @click="activeDayModal = false" class="px-4 py-1.5 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-lg text-xs font-medium transition">
+            <button @click="activeDayModal = false" class="px-3.5 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-lg text-xs font-medium transition">
               關閉
             </button>
           </div>
         </div>
+
       </div>
     </div>
 
     <!-- EVENT DETAIL MODAL -->
-    <div v-if="activeDetailModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/50 backdrop-blur-xs">
-      <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden border border-gray-100 transform transition-all">
-        <!-- Header banner with category color -->
-        <div class="px-6 py-4 flex items-center justify-between text-white" :style="{ backgroundColor: getCategoryColor(selectedEvent.categoryId) }">
+    <div v-if="activeDetailModal" class="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-gray-900/50 backdrop-blur-2xs">
+      <div class="bg-white rounded-t-2xl sm:rounded-xl shadow-2xl w-full max-w-lg overflow-hidden border border-gray-100 animate-slide-up sm:animate-none">
+        
+        <div class="w-12 h-1 bg-gray-300 rounded-full mx-auto my-2 sm:hidden"></div>
+
+        <div class="px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between text-white" :style="{ backgroundColor: getCategoryColor(selectedEvent.categoryId) }">
           <span class="text-xs font-bold uppercase tracking-wider bg-black/20 px-2 py-0.5 rounded">
             {{ getCategoryName(selectedEvent.categoryId) }}
           </span>
-          <div class="flex items-center space-x-2">
-            <button @click="openEditModal(selectedEvent)" class="p-1.5 hover:bg-black/20 rounded-lg transition" title="編輯">
+          <div class="flex items-center space-x-1">
+            <button @click="openEditModal(selectedEvent)" class="p-2 hover:bg-black/20 rounded-lg transition" title="編輯">
               <i class="fa-solid fa-pen-to-square"></i>
             </button>
-            <button @click="confirmDelete(selectedEvent)" class="p-1.5 hover:bg-black/20 rounded-lg transition" title="刪除">
+            <button @click="confirmDelete(selectedEvent)" class="p-2 hover:bg-black/20 rounded-lg transition" title="刪除">
               <i class="fa-solid fa-trash-can"></i>
             </button>
-            <button @click="activeDetailModal = false" class="p-1.5 hover:bg-black/20 rounded-lg transition" title="關閉">
+            <button @click="activeDetailModal = false" class="p-2 hover:bg-black/20 rounded-lg transition" title="關閉">
               <i class="fa-solid fa-xmark text-lg"></i>
             </button>
           </div>
         </div>
 
-        <div class="p-6 space-y-4">
-          <h3 class="text-xl font-bold text-gray-900 leading-snug">{{ selectedEvent.title }}</h3>
+        <div class="p-4 sm:p-6 space-y-3.5">
+          <h3 class="text-base sm:text-xl font-bold text-gray-900 leading-snug">{{ selectedEvent.title }}</h3>
 
-          <div class="space-y-2 text-sm text-gray-600">
-            <div class="flex items-center space-x-3">
-              <i class="fa-regular fa-calendar text-blue-600 w-5"></i>
+          <div class="space-y-2 text-xs sm:text-sm text-gray-600">
+            <div class="flex items-center space-x-2.5">
+              <i class="fa-regular fa-calendar text-blue-600 w-4 text-center"></i>
               <span class="font-medium text-gray-800">{{ selectedEvent.startDate }} <template v-if="selectedEvent.endDate && selectedEvent.endDate !== selectedEvent.startDate"> 至 {{ selectedEvent.endDate }}</template></span>
             </div>
             
-            <div v-if="selectedEvent.time" class="flex items-center space-x-3">
-              <i class="fa-regular fa-clock text-blue-600 w-5"></i>
+            <div v-if="selectedEvent.time" class="flex items-center space-x-2.5">
+              <i class="fa-regular fa-clock text-blue-600 w-4 text-center"></i>
               <span>{{ selectedEvent.time }}</span>
             </div>
 
-            <div class="flex items-center space-x-3">
-              <i class="fa-solid fa-building-user text-blue-600 w-5"></i>
-              <span>主辦/承辦單位：<strong>{{ selectedEvent.department }}</strong></span>
+            <div class="flex items-center space-x-2.5">
+              <i class="fa-solid fa-building-user text-blue-600 w-4 text-center"></i>
+              <span>承辦單位：<strong>{{ selectedEvent.department }}</strong></span>
             </div>
 
-            <div v-if="selectedEvent.location" class="flex items-center space-x-3">
-              <i class="fa-solid fa-location-dot text-blue-600 w-5"></i>
+            <div v-if="selectedEvent.location" class="flex items-center space-x-2.5">
+              <i class="fa-solid fa-location-dot text-blue-600 w-4 text-center"></i>
               <span>地點：{{ selectedEvent.location }}</span>
             </div>
           </div>
 
-          <div v-if="selectedEvent.description" class="pt-3 border-t border-gray-100">
-            <h4 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">詳細備註說明</h4>
-            <div class="bg-gray-50 p-3 rounded-lg text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
+          <div v-if="selectedEvent.description" class="pt-2 border-t border-gray-100">
+            <h4 class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">詳細說明</h4>
+            <div class="bg-gray-50 p-2.5 rounded-lg text-xs sm:text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
               {{ selectedEvent.description }}
             </div>
           </div>
         </div>
 
-        <div class="bg-gray-50 px-6 py-3 border-t border-gray-100 flex justify-end">
-          <button @click="activeDetailModal = false" class="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-lg text-sm font-medium transition">
+        <div class="bg-gray-50 px-4 sm:px-6 py-3 border-t border-gray-100 flex justify-end pb-safe">
+          <button @click="activeDetailModal = false" class="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-lg text-xs sm:text-sm font-medium transition">
             關閉
           </button>
         </div>
@@ -632,78 +665,81 @@
     </div>
 
     <!-- ADD / EDIT EVENT MODAL -->
-    <div v-if="activeFormModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/50 backdrop-blur-xs">
-      <div class="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden border border-gray-100">
-        <div class="bg-blue-600 px-6 py-3 flex items-center justify-between text-white">
-          <h3 class="font-bold text-base">
+    <div v-if="activeFormModal" class="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-gray-900/50 backdrop-blur-2xs">
+      <div class="bg-white rounded-t-2xl sm:rounded-xl shadow-2xl w-full max-w-md overflow-hidden border border-gray-100 animate-slide-up sm:animate-none max-h-[90vh] flex flex-col">
+        
+        <div class="w-12 h-1 bg-gray-300 rounded-full mx-auto my-2 sm:hidden"></div>
+
+        <div class="bg-blue-600 px-4 sm:px-6 py-3 flex items-center justify-between text-white">
+          <h3 class="font-bold text-sm sm:text-base">
             <i class="fa-solid" :class="isEditMode ? 'fa-pen-to-square' : 'fa-calendar-plus'"></i>
             {{ isEditMode ? '修改行事活動' : '新增行事活動' }}
           </h3>
-          <button @click="activeFormModal = false" class="text-white hover:opacity-80">
+          <button @click="activeFormModal = false" class="text-white hover:opacity-80 p-1">
             <i class="fa-solid fa-xmark text-lg"></i>
           </button>
         </div>
 
-        <form @submit.prevent="saveEvent" class="p-6 space-y-4">
+        <form @submit.prevent="saveEvent" class="p-4 sm:p-6 space-y-3 sm:space-y-4 overflow-y-auto custom-scrollbar flex-1 pb-safe">
           <div>
             <label class="block text-xs font-bold text-gray-700 mb-1">活動名稱 *</label>
             <input type="text" v-model="formEvent.title" required placeholder="例如：期中學業評量"
                    class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
           </div>
 
-          <div class="grid grid-cols-2 gap-3">
+          <div class="grid grid-cols-2 gap-2.5">
             <div>
               <label class="block text-xs font-bold text-gray-700 mb-1">開始日期 *</label>
               <input type="date" v-model="formEvent.startDate" required
-                     class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                     class="w-full px-2.5 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
             </div>
             <div>
               <label class="block text-xs font-bold text-gray-700 mb-1">結束日期</label>
               <input type="date" v-model="formEvent.endDate"
-                     class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                     class="w-full px-2.5 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
             </div>
           </div>
 
-          <div class="grid grid-cols-2 gap-3">
+          <div class="grid grid-cols-2 gap-2.5">
             <div>
               <label class="block text-xs font-bold text-gray-700 mb-1">時間 / 時段</label>
-              <input type="text" v-model="formEvent.time" placeholder="例如：12:40 或 全天"
+              <input type="text" v-model="formEvent.time" placeholder="如: 12:40 或 全天"
                      class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
             </div>
             <div>
               <label class="block text-xs font-bold text-gray-700 mb-1">承辦處室 *</label>
-              <select v-model="formEvent.department" required class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
+              <select v-model="formEvent.department" required class="w-full px-2 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
                 <option v-for="dept in departments" :key="dept" :value="dept">{{ dept }}</option>
               </select>
             </div>
           </div>
 
-          <div class="grid grid-cols-2 gap-3">
+          <div class="grid grid-cols-2 gap-2.5">
             <div>
               <label class="block text-xs font-bold text-gray-700 mb-1">活動類別 *</label>
-              <select v-model="formEvent.categoryId" required class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
+              <select v-model="formEvent.categoryId" required class="w-full px-2 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
                 <option v-for="cat in categories" :key="cat.id" :value="cat.id">{{ cat.name }}</option>
               </select>
             </div>
             <div>
               <label class="block text-xs font-bold text-gray-700 mb-1">地點</label>
-              <input type="text" v-model="formEvent.location" placeholder="例如：員林演藝廳、視聽教室"
+              <input type="text" v-model="formEvent.location" placeholder="例如：視聽教室"
                      class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
             </div>
           </div>
 
           <div>
-            <label class="block text-xs font-bold text-gray-700 mb-1">詳細描述 / 備註內容</label>
-            <textarea v-model="formEvent.description" rows="3" placeholder="請輸入活動注意事項或細節..."
+            <label class="block text-xs font-bold text-gray-700 mb-1">說明 / 備註</label>
+            <textarea v-model="formEvent.description" rows="2" placeholder="請輸入活動細節..."
                       class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"></textarea>
           </div>
 
           <div class="pt-2 flex justify-end space-x-2">
-            <button type="button" @click="activeFormModal = false" class="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50">
+            <button type="button" @click="activeFormModal = false" class="px-4 py-2 border border-gray-300 rounded-lg text-xs sm:text-sm font-medium text-gray-700 hover:bg-gray-50">
               取消
             </button>
-            <button type="submit" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium shadow">
-              儲存活動
+            <button type="submit" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs sm:text-sm font-medium shadow-xs">
+              儲存
             </button>
           </div>
         </form>
@@ -711,20 +747,20 @@
     </div>
 
     <!-- DELETE CONFIRMATION MODAL -->
-    <div v-if="activeDeleteModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/50 backdrop-blur-xs">
-      <div class="bg-white rounded-xl shadow-xl w-full max-w-sm p-5 text-center space-y-4">
-        <div class="w-12 h-12 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto text-xl">
+    <div v-if="activeDeleteModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/50 backdrop-blur-2xs">
+      <div class="bg-white rounded-xl shadow-xl w-full max-w-xs p-5 text-center space-y-3">
+        <div class="w-10 h-10 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto text-lg">
           <i class="fa-solid fa-triangle-exclamation"></i>
         </div>
         <div>
-          <h3 class="font-bold text-gray-800 text-base">確定要刪除此行事嗎？</h3>
+          <h3 class="font-bold text-gray-800 text-sm sm:text-base">確定要刪除？</h3>
           <p class="text-xs text-gray-500 mt-1">「{{ eventToDelete?.title }}」刪除後無法恢復。</p>
         </div>
-        <div class="flex justify-center space-x-3 pt-2">
-          <button @click="activeDeleteModal = false" class="px-4 py-2 border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50">
+        <div class="flex justify-center space-x-2 pt-2">
+          <button @click="activeDeleteModal = false" class="px-3.5 py-1.5 border border-gray-300 text-gray-700 text-xs font-medium rounded-lg">
             取消
           </button>
-          <button @click="executeDelete" class="px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 shadow">
+          <button @click="executeDelete" class="px-3.5 py-1.5 bg-red-600 text-white text-xs font-medium rounded-lg shadow-xs">
             確認刪除
           </button>
         </div>
@@ -732,21 +768,20 @@
     </div>
 
     <!-- PASSWORD VERIFICATION MODAL -->
-    <div v-if="adminPasswordModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/50 backdrop-blur-xs">
-      <div class="bg-white rounded-xl shadow-2xl w-full max-w-sm overflow-hidden border border-gray-100">
-        <div class="bg-amber-600 px-5 py-3.5 flex items-center justify-between text-white">
-          <h3 class="font-bold text-base flex items-center">
+    <div v-if="adminPasswordModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/50 backdrop-blur-2xs">
+      <div class="bg-white rounded-xl shadow-2xl w-full max-w-xs overflow-hidden border border-gray-100">
+        <div class="bg-amber-600 px-4 py-3 flex items-center justify-between text-white">
+          <h3 class="font-bold text-sm flex items-center">
             <i class="fa-solid fa-lock mr-2"></i>管理員身分驗證
           </h3>
-          <button @click="adminPasswordModal = false" class="text-white hover:opacity-80">
+          <button @click="adminPasswordModal = false" class="text-white hover:opacity-80 p-1">
             <i class="fa-solid fa-xmark text-lg"></i>
           </button>
         </div>
         
-        <form @submit.prevent="verifyPassword" class="p-6 space-y-4">
-          <p class="text-xs text-gray-600">請輸入管理員密碼以解鎖新增、編輯與刪除權限：</p>
+        <form @submit.prevent="verifyPassword" class="p-4 sm:p-5 space-y-3">
+          <p class="text-xs text-gray-600">請輸入管理員密碼：</p>
           <div>
-            <label class="block text-xs font-bold text-gray-700 mb-1">管理密碼</label>
             <input type="password" v-model="inputPassword" placeholder="預設密碼：2140" autofocus
                    class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
             <p v-if="passwordError" class="text-xs text-red-600 font-bold mt-1.5 flex items-center">
@@ -754,11 +789,11 @@
             </p>
           </div>
 
-          <div class="pt-2 flex justify-end space-x-2">
-            <button type="button" @click="adminPasswordModal = false" class="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50">
+          <div class="pt-1 flex justify-end space-x-2">
+            <button type="button" @click="adminPasswordModal = false" class="px-3 py-1.5 border border-gray-300 rounded-lg text-xs font-medium text-gray-700">
               取消
             </button>
-            <button type="submit" class="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-sm font-medium shadow">
+            <button type="submit" class="px-3.5 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-xs font-medium shadow-xs">
               驗證登入
             </button>
           </div>
@@ -767,80 +802,50 @@
     </div>
 
     <!-- FIREBASE CLOUD CONFIGURATION MODAL -->
-    <div v-if="activeFirebaseModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/50 backdrop-blur-xs">
-      <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden border border-gray-100">
-        <div class="bg-blue-600 px-5 py-3.5 flex items-center justify-between text-white">
-          <h3 class="font-bold text-base flex items-center">
-            <i class="fa-solid fa-cloud-arrow-up mr-2"></i>Firebase 雲端資料庫設定
+    <div v-if="activeFirebaseModal" class="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-gray-900/50 backdrop-blur-2xs">
+      <div class="bg-white rounded-t-2xl sm:rounded-xl shadow-2xl w-full max-w-lg overflow-hidden border border-gray-100 animate-slide-up sm:animate-none max-h-[90vh] flex flex-col">
+        
+        <div class="w-12 h-1 bg-gray-300 rounded-full mx-auto my-2 sm:hidden"></div>
+
+        <div class="bg-blue-600 px-4 sm:px-5 py-3 flex items-center justify-between text-white">
+          <h3 class="font-bold text-sm sm:text-base flex items-center">
+            <i class="fa-solid fa-cloud-arrow-up mr-2"></i>Firebase 雲端設定
           </h3>
-          <button @click="activeFirebaseModal = false" class="text-white hover:opacity-80">
+          <button @click="activeFirebaseModal = false" class="text-white hover:opacity-80 p-1">
             <i class="fa-solid fa-xmark text-lg"></i>
           </button>
         </div>
         
-        <div class="p-6 space-y-4 max-h-[80vh] overflow-y-auto custom-scrollbar">
-          <div class="bg-blue-50 border border-blue-200 rounded-lg p-3 text-xs text-blue-900 space-y-1">
-            <p class="font-bold"><i class="fa-solid fa-circle-info mr-1 text-blue-600"></i>已預設載入 tuku-es-calendar 金鑰：</p>
-            <p>系統目前已預設連結至您的專案 `tuku-es-calendar`。若要切換其它專案，亦可直接於下方貼上全新設定物件。</p>
-          </div>
-
-          <div v-if="syncStatus === 'error'" class="bg-red-50 border border-red-200 text-red-700 p-3 rounded-lg text-xs space-y-1">
-            <p class="font-bold"><i class="fa-solid fa-triangle-exclamation mr-1"></i>Firestore 權限不足 (Missing or insufficient permissions)</p>
-            <p>請至 Firebase Console -> Firestore Database -> <strong>Rules (規則)</strong>，將規則修改為：</p>
-            <pre class="bg-red-100 p-2 rounded text-[11px] font-mono select-all overflow-x-auto">rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    match /{document=**} {
-      allow read, write: if true;
-    }
-  }
-}</pre>
+        <div class="p-4 sm:p-6 space-y-3.5 overflow-y-auto custom-scrollbar flex-1 pb-safe">
+          <div class="bg-blue-50 border border-blue-200 rounded-lg p-2.5 text-xs text-blue-900 space-y-1">
+            <p class="font-bold"><i class="fa-solid fa-circle-info mr-1 text-blue-600"></i>已預設連結專案 tuku-es-calendar：</p>
+            <p class="text-[11px]">若需更換至您的專案，請於下方輸入 Firebase 設定金鑰。</p>
           </div>
 
           <div>
             <div class="flex items-center justify-between mb-1">
-              <label class="block text-xs font-bold text-gray-700">快速貼上 firebaseConfig JSON 或 物件：</label>
-              <button @click="parseJsonConfig" class="text-[11px] text-blue-600 font-bold hover:underline">自動解析貼上內容</button>
+              <label class="block text-xs font-bold text-gray-700">快速貼上 firebaseConfig：</label>
+              <button @click="parseJsonConfig" class="text-[11px] text-blue-600 font-bold hover:underline">自動解析內容</button>
             </div>
-            <textarea v-model="rawConfigInput" rows="3" placeholder='例如：
-const firebaseConfig = {
-  apiKey: "AIzaSy...",
-  authDomain: "tuku-es-calendar.firebaseapp.com",
-  projectId: "tuku-es-calendar",
-  ...
-};' class="w-full p-2 border border-gray-300 rounded-lg text-xs font-mono bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
+            <textarea v-model="rawConfigInput" rows="2" placeholder='貼上 firebaseConfig 物件...' class="w-full p-2 border border-gray-300 rounded-lg text-xs font-mono bg-gray-50 focus:bg-white focus:outline-none"></textarea>
           </div>
 
-          <div class="relative flex py-1 items-center">
-            <div class="flex-grow border-t border-gray-200"></div>
-            <span class="flex-shrink mx-3 text-gray-400 text-xs font-semibold">目前使用中的欄位金鑰</span>
-            <div class="flex-grow border-t border-gray-200"></div>
-          </div>
-
-          <div class="grid grid-cols-2 gap-3 text-xs">
+          <div class="grid grid-cols-2 gap-2 text-xs">
             <div>
-              <label class="block font-semibold text-gray-700 mb-1">apiKey *</label>
-              <input type="text" v-model="customFirebaseConfig.apiKey" placeholder="AIzaSy..." class="w-full px-2.5 py-1.5 border border-gray-300 rounded font-mono focus:outline-none focus:border-blue-500">
+              <label class="block font-semibold text-gray-700 mb-0.5">apiKey *</label>
+              <input type="text" v-model="customFirebaseConfig.apiKey" placeholder="AIzaSy..." class="w-full px-2 py-1.5 border border-gray-300 rounded font-mono">
             </div>
             <div>
-              <label class="block font-semibold text-gray-700 mb-1">authDomain *</label>
-              <input type="text" v-model="customFirebaseConfig.authDomain" placeholder="xxx.firebaseapp.com" class="w-full px-2.5 py-1.5 border border-gray-300 rounded font-mono focus:outline-none focus:border-blue-500">
+              <label class="block font-semibold text-gray-700 mb-0.5">authDomain *</label>
+              <input type="text" v-model="customFirebaseConfig.authDomain" placeholder="xxx.firebaseapp.com" class="w-full px-2 py-1.5 border border-gray-300 rounded font-mono">
             </div>
             <div>
-              <label class="block font-semibold text-gray-700 mb-1">projectId *</label>
-              <input type="text" v-model="customFirebaseConfig.projectId" placeholder="my-school-app" class="w-full px-2.5 py-1.5 border border-gray-300 rounded font-mono focus:outline-none focus:border-blue-500">
+              <label class="block font-semibold text-gray-700 mb-0.5">projectId *</label>
+              <input type="text" v-model="customFirebaseConfig.projectId" placeholder="tuku-es-calendar" class="w-full px-2 py-1.5 border border-gray-300 rounded font-mono">
             </div>
             <div>
-              <label class="block font-semibold text-gray-700 mb-1">storageBucket</label>
-              <input type="text" v-model="customFirebaseConfig.storageBucket" placeholder="xxx.appspot.com" class="w-full px-2.5 py-1.5 border border-gray-300 rounded font-mono focus:outline-none focus:border-blue-500">
-            </div>
-            <div>
-              <label class="block font-semibold text-gray-700 mb-1">messagingSenderId</label>
-              <input type="text" v-model="customFirebaseConfig.messagingSenderId" placeholder="123456789" class="w-full px-2.5 py-1.5 border border-gray-300 rounded font-mono focus:outline-none focus:border-blue-500">
-            </div>
-            <div>
-              <label class="block font-semibold text-gray-700 mb-1">appId *</label>
-              <input type="text" v-model="customFirebaseConfig.appId" placeholder="1:123456:web:abcd" class="w-full px-2.5 py-1.5 border border-gray-300 rounded font-mono focus:outline-none focus:border-blue-500">
+              <label class="block font-semibold text-gray-700 mb-0.5">appId *</label>
+              <input type="text" v-model="customFirebaseConfig.appId" placeholder="1:123456:web:abcd" class="w-full px-2 py-1.5 border border-gray-300 rounded font-mono">
             </div>
           </div>
 
@@ -849,16 +854,16 @@ const firebaseConfig = {
           </p>
         </div>
 
-        <div class="bg-gray-50 px-6 py-3 border-t border-gray-100 flex items-center justify-between">
-          <button @click="clearFirebaseConfig" class="px-3 py-1.5 border border-red-300 text-red-600 hover:bg-red-50 rounded-lg text-xs font-medium transition">
-            清除設定 (切換本機儲存)
+        <div class="bg-gray-50 px-4 sm:px-6 py-3 border-t border-gray-100 flex items-center justify-between pb-safe">
+          <button @click="clearFirebaseConfig" class="px-2.5 py-1.5 border border-red-300 text-red-600 rounded text-xs font-medium">
+            使用本機儲存
           </button>
           <div class="flex space-x-2">
-            <button @click="activeFirebaseModal = false" class="px-3 py-1.5 border border-gray-300 text-gray-600 hover:bg-gray-100 rounded-lg text-xs font-medium transition">
+            <button @click="activeFirebaseModal = false" class="px-3 py-1.5 border border-gray-300 text-gray-600 rounded text-xs font-medium">
               取消
             </button>
-            <button @click="saveFirebaseConfig" class="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold shadow transition">
-              儲存並連接雲端
+            <button @click="saveFirebaseConfig" class="px-3.5 py-1.5 bg-blue-600 text-white rounded text-xs font-bold shadow-xs">
+              儲存設定
             </button>
           </div>
         </div>
@@ -874,7 +879,7 @@ const firebaseConfig = {
 
     const { createApp, ref, computed, onMounted } = Vue;
 
-    // 預設 Firebase 金鑰
+    // Default Firebase Config for tuku-es-calendar
     const DEFAULT_FIREBASE_CONFIG = {
       apiKey: "AIzaSyDRNURwHBCvq-M7R1h4l8hzkqLB8ca7IOI",
       authDomain: "tuku-es-calendar.firebaseapp.com",
@@ -890,13 +895,12 @@ const firebaseConfig = {
         const currentView = ref('month'); // 'month', 'week', 'day', 'agenda'
         
         // Dynamic Today initialization
-        const todayDate = new Date();
         const currentDate = ref(new Date()); 
         const selectedDate = ref(new Date());
         const sidebarOpen = ref(false);
         const searchQuery = ref('');
 
-        // Agenda Filter Scope: 'twoWeeks' (當週及下一週預告) or 'all' (全學期)
+        // Agenda Filter Scope: 'twoWeeks' or 'all'
         const agendaFilterMode = ref('twoWeeks');
 
         // Cloud Firestore Synchronization State
@@ -910,7 +914,7 @@ const firebaseConfig = {
         const activeDetailModal = ref(false);
         const activeFormModal = ref(false);
         const activeDeleteModal = ref(false);
-        const activeDayModal = ref(false); // Day summary popup modal
+        const activeDayModal = ref(false);
         const activeFirebaseModal = ref(false);
         const firebaseModalError = ref('');
         const rawConfigInput = ref('');
@@ -941,7 +945,7 @@ const firebaseConfig = {
               }
             }
           } catch (e) {
-            console.warn("LocalStorage not accessible:", e);
+            console.warn("LocalStorage error:", e);
           }
           return null;
         };
@@ -989,7 +993,6 @@ const firebaseConfig = {
         };
 
         const defaultEvents = [
-          // 115學年度上學期 (2026/08 - 2027/02) 完整行事表
           { id: '101', title: '全校備課日與教職員會議', startDate: '2026-08-25', endDate: '2026-08-25', time: '08:30 - 16:00', department: '教導處', categoryId: 'admin', description: '全校教職員備課、環境整備與學期工作會議' },
           { id: '102', title: '115學年度第一學期開學日', startDate: '2026-08-31', endDate: '2026-08-31', time: '07:30', department: '全校', categoryId: 'admin', description: '始業式、正式上課與發放教科書' },
           { id: '201', title: '社團選社與開課', startDate: '2026-09-04', endDate: '2026-09-04', department: '訓導組', categoryId: 'regular', description: '課後社團報名與第一次社團活動' },
@@ -1025,7 +1028,7 @@ const firebaseConfig = {
             });
             await batch.commit();
           } catch (err) {
-            console.error("Error seeding initial data to Firestore:", err);
+            console.error("Error seeding initial data:", err);
           }
         };
 
@@ -1060,13 +1063,11 @@ const firebaseConfig = {
               }
             }
 
-            // Fallback to default user-provided Firebase Config
             if (!firebaseConfig) {
               firebaseConfig = DEFAULT_FIREBASE_CONFIG;
             }
 
             if (!firebaseConfig || !firebaseConfig.apiKey || !firebaseConfig.projectId) {
-              console.log("未檢測到有效 Firebase 金鑰，啟用本機 LocalStorage 安全儲存模式");
               syncStatus.value = 'offline';
               return;
             }
@@ -1084,7 +1085,7 @@ const firebaseConfig = {
                 userCredential = await signInAnonymously(auth);
               }
             } catch (authErr) {
-              console.warn("Auth initial check warning:", authErr);
+              console.warn("Auth initial check:", authErr);
             }
 
             const user = auth.currentUser || (userCredential ? userCredential.user : null);
@@ -1108,13 +1109,13 @@ const firebaseConfig = {
                 saveLocalEvents(cloudEvents);
               }
             }, (err) => {
-              console.warn("Firestore sync warning (falling back to LocalStorage):", err);
+              console.warn("Firestore sync error:", err);
               syncStatus.value = 'error';
-              firebaseModalError.value = 'Firestore 存取權限不足。請至 Firebase Console 調整 Rules 允許讀寫權限。';
+              firebaseModalError.value = 'Firestore 權限不足，已備援使用本機紀錄。';
             });
 
           } catch (err) {
-            console.warn("Cloud sync initialization fallback:", err);
+            console.warn("Cloud sync fallback:", err);
             syncStatus.value = 'offline';
             eventsColRef = null;
           }
@@ -1140,15 +1141,11 @@ const firebaseConfig = {
             const apiKeyMatch = text.match(/apiKey:\s*["']([^"']+)["']/);
             const authDomainMatch = text.match(/authDomain:\s*["']([^"']+)["']/);
             const projectIdMatch = text.match(/projectId:\s*["']([^"']+)["']/);
-            const storageBucketMatch = text.match(/storageBucket:\s*["']([^"']+)["']/);
-            const messagingSenderIdMatch = text.match(/messagingSenderId:\s*["']([^"']+)["']/);
             const appIdMatch = text.match(/appId:\s*["']([^"']+)["']/);
 
             if (apiKeyMatch) customFirebaseConfig.value.apiKey = apiKeyMatch[1];
             if (authDomainMatch) customFirebaseConfig.value.authDomain = authDomainMatch[1];
             if (projectIdMatch) customFirebaseConfig.value.projectId = projectIdMatch[1];
-            if (storageBucketMatch) customFirebaseConfig.value.storageBucket = storageBucketMatch[1];
-            if (messagingSenderIdMatch) customFirebaseConfig.value.messagingSenderId = messagingSenderIdMatch[1];
             if (appIdMatch) customFirebaseConfig.value.appId = appIdMatch[1];
 
             if (!apiKeyMatch && text.trim().startsWith('{')) {
@@ -1156,14 +1153,12 @@ const firebaseConfig = {
               if (parsed.apiKey) customFirebaseConfig.value.apiKey = parsed.apiKey;
               if (parsed.authDomain) customFirebaseConfig.value.authDomain = parsed.authDomain;
               if (parsed.projectId) customFirebaseConfig.value.projectId = parsed.projectId;
-              if (parsed.storageBucket) customFirebaseConfig.value.storageBucket = parsed.storageBucket;
-              if (parsed.messagingSenderId) customFirebaseConfig.value.messagingSenderId = parsed.messagingSenderId;
               if (parsed.appId) customFirebaseConfig.value.appId = parsed.appId;
             }
 
-            firebaseModalError.value = '解析成功！已填充相關欄位，請點擊「儲存並連接雲端」。';
+            firebaseModalError.value = '解析成功！請點擊「儲存設定」。';
           } catch (e) {
-            firebaseModalError.value = '無法自動解析輸入內容，請直接在下方欄位手動填寫。';
+            firebaseModalError.value = '無法自動解析，請手動輸入關鍵欄位。';
           }
         };
 
@@ -1192,7 +1187,7 @@ const firebaseConfig = {
 
         const resetToDefaultData = async () => {
           requireAdmin(async () => {
-            if (confirm('確定要將行事曆恢復為預設學期行程嗎？目前自訂的新增修改將被重置。')) {
+            if (confirm('確定要將行事曆恢復為預設學期行程嗎？')) {
               events.value = [...defaultEvents];
               saveLocalEvents(defaultEvents);
               if (eventsColRef) {
@@ -1225,23 +1220,14 @@ const firebaseConfig = {
         };
 
         window.addEventListener('popstate', (e) => {
-          if (activeDetailModal.value) {
-            activeDetailModal.value = false;
-          } else if (activeDayModal.value) {
-            activeDayModal.value = false;
-          } else if (activeFormModal.value) {
-            activeFormModal.value = false;
-          } else if (activeDeleteModal.value) {
-            activeDeleteModal.value = false;
-          } else if (adminPasswordModal.value) {
-            adminPasswordModal.value = false;
-          } else if (activeFirebaseModal.value) {
-            activeFirebaseModal.value = false;
-          } else if (sidebarOpen.value) {
-            sidebarOpen.value = false;
-          } else if (currentView.value !== 'month') {
-            currentView.value = 'month';
-          }
+          if (activeDetailModal.value) activeDetailModal.value = false;
+          else if (activeDayModal.value) activeDayModal.value = false;
+          else if (activeFormModal.value) activeFormModal.value = false;
+          else if (activeDeleteModal.value) activeDeleteModal.value = false;
+          else if (adminPasswordModal.value) adminPasswordModal.value = false;
+          else if (activeFirebaseModal.value) activeFirebaseModal.value = false;
+          else if (sidebarOpen.value) sidebarOpen.value = false;
+          else if (currentView.value !== 'month') currentView.value = 'month';
         });
 
         const onSearchInput = () => {
@@ -1290,12 +1276,12 @@ const firebaseConfig = {
         const selectedDepartments = ref([...departments]);
 
         const categories = ref([
-          { id: 'exam', name: '學業評量與測驗', color: '#ef4444', bgColor: '#fee2e2', textColor: '#991b1b' },
-          { id: 'event', name: '全校重大活動與見學', color: '#8b5cf6', bgColor: '#f3e8ff', textColor: '#5b21b6' },
-          { id: 'contest', name: '學藝語文與體育競賽', color: '#f59e0b', bgColor: '#fef3c7', textColor: '#92400e' },
-          { id: 'regular', name: '常態深耕與書車講座', color: '#10b981', bgColor: '#d1fae5', textColor: '#065f46' },
-          { id: 'admin', name: '校務行政與處室會議', color: '#3b82f6', bgColor: '#dbeafe', textColor: '#1e40af' },
-          { id: 'holiday', name: '國定假日與補放假', color: '#ec4899', bgColor: '#fce7f3', textColor: '#9d174d' }
+          { id: 'exam', name: '學業評量', color: '#ef4444', bgColor: '#fee2e2', textColor: '#991b1b' },
+          { id: 'event', name: '重大活動', color: '#8b5cf6', bgColor: '#f3e8ff', textColor: '#5b21b6' },
+          { id: 'contest', name: '競賽發表', color: '#f59e0b', bgColor: '#fef3c7', textColor: '#92400e' },
+          { id: 'regular', name: '常態講座', color: '#10b981', bgColor: '#d1fae5', textColor: '#065f46' },
+          { id: 'admin', name: '行政會議', color: '#3b82f6', bgColor: '#dbeafe', textColor: '#1e40af' },
+          { id: 'holiday', name: '國定假日', color: '#ec4899', bgColor: '#fce7f3', textColor: '#9d174d' }
         ]);
 
         const selectedCategoryIds = ref(categories.value.map(c => c.id));
@@ -1324,7 +1310,7 @@ const firebaseConfig = {
               syncStatus.value = 'synced';
               updateLocalState();
             } catch (err) {
-              console.error("Error saving event to Firestore:", err);
+              console.error("Error saving event:", err);
               syncStatus.value = 'error';
               updateLocalState();
             }
@@ -1352,7 +1338,7 @@ const firebaseConfig = {
                 syncStatus.value = 'synced';
                 removeLocalState();
               } catch (err) {
-                console.error("Error deleting event from Firestore:", err);
+                console.error("Error deleting event:", err);
                 syncStatus.value = 'error';
                 removeLocalState();
               }
@@ -1366,7 +1352,6 @@ const firebaseConfig = {
           activeDeleteModal.value = false;
         }
 
-        // Filtered events
         const filteredEvents = computed(() => {
           return events.value.filter(evt => {
             const matchesCategory = selectedCategoryIds.value.includes(evt.categoryId);
@@ -1382,57 +1367,52 @@ const firebaseConfig = {
           }).sort((a, b) => a.startDate.localeCompare(b.startDate));
         });
 
-        // Computed status texts for Vue safety
         const syncStatusText = computed(() => {
-          if (syncStatus.value === 'synced') return '雲端同步中 (tuku-es-calendar)';
-          if (syncStatus.value === 'syncing') return '同步處理中...';
-          if (syncStatus.value === 'error') return '權限不足 (已使用本機儲存)';
-          return '本機儲存';
+          if (syncStatus.value === 'synced') return '雲端同步中';
+          if (syncStatus.value === 'syncing') return '同步中...';
+          if (syncStatus.value === 'error') return '本機儲存 (無權限)';
+          return '本機模式';
         });
 
         const agendaSubtitleText = computed(() => {
           if (agendaFilterMode.value === 'twoWeeks') {
-            return '聚焦日期範圍：' + twoWeeksDateRangeText.value;
+            return '聚焦日期：' + twoWeeksDateRangeText.value;
           }
-          return '依學期日期排序，共 ' + filteredEvents.value.length + ' 項活動';
+          return '依學期日期排序，共 ' + filteredEvents.value.length + ' 項';
         });
 
-        // Current Period Header Title
         const currentPeriodTitle = computed(() => {
           const y = currentDate.value.getFullYear();
           const m = currentDate.value.getMonth() + 1;
           const rocY = y - 1911;
 
           if (currentView.value === 'month') {
-            return '民國 ' + rocY + ' 年 ' + m + ' 月 (' + y + ')';
+            return rocY + '年 ' + m + '月';
           } else if (currentView.value === 'week') {
             return y + '年 ' + m + '月 (第 ' + getWeekNumber(currentDate.value) + ' 週)';
           } else if (currentView.value === 'day') {
             return y + '年 ' + m + '月 ' + currentDate.value.getDate() + '日';
           } else {
-            return '115 學年度行事預告';
+            return '115學年預告';
           }
         });
 
-        // Today formatted string for sidebar card
         const todayFormattedDisplay = computed(() => {
           const now = new Date();
           return formatFullDate(now);
         });
 
-        // Date range text for Agenda Current Week + Next Week Forecast
         const twoWeeksDateRangeText = computed(() => {
           const now = new Date(currentDate.value);
           const startOfWeek = new Date(now);
-          startOfWeek.setDate(now.getDate() - now.getDay()); // Sunday of this week
+          startOfWeek.setDate(now.getDate() - now.getDay());
 
           const endOfNextWeek = new Date(startOfWeek);
-          endOfNextWeek.setDate(startOfWeek.getDate() + 13); // Saturday of next week
+          endOfNextWeek.setDate(startOfWeek.getDate() + 13);
 
           return formatDateStr(startOfWeek) + ' ~ ' + formatDateStr(endOfNextWeek);
         });
 
-        // Month View Days grid computation
         const monthViewDays = computed(() => {
           const year = currentDate.value.getFullYear();
           const month = currentDate.value.getMonth();
@@ -1443,20 +1423,17 @@ const firebaseConfig = {
           const days = [];
           const startDayOfWeek = firstDayOfMonth.getDay();
 
-          // Prev month padding
           const prevMonthLastDay = new Date(year, month, 0).getDate();
           for (let i = startDayOfWeek - 1; i >= 0; i--) {
             const d = new Date(year, month - 1, prevMonthLastDay - i);
             days.push(createDayObj(d, false));
           }
 
-          // Current month days
           for (let i = 1; i <= lastDayOfMonth.getDate(); i++) {
             const d = new Date(year, month, i);
             days.push(createDayObj(d, true));
           }
 
-          // Next month padding to complete 42 cells
           const remainingCells = 42 - days.length;
           for (let i = 1; i <= remainingCells; i++) {
             const d = new Date(year, month + 1, i);
@@ -1485,7 +1462,6 @@ const firebaseConfig = {
           };
         }
 
-        // Week View Days
         const weekViewDays = computed(() => {
           const curr = new Date(currentDate.value);
           const first = curr.getDate() - curr.getDay();
@@ -1501,7 +1477,6 @@ const firebaseConfig = {
           return days;
         });
 
-        // Day View Events
         const dayViewEvents = computed(() => {
           const dateStr = formatDateStr(selectedDate.value);
           return filteredEvents.value.filter(evt => {
@@ -1510,7 +1485,6 @@ const firebaseConfig = {
           });
         });
 
-        // Grouped Agenda Events filtered for "Current Week + Next Week" or "All"
         const groupedAgendaEvents = computed(() => {
           let sourceEvents = filteredEvents.value;
 
@@ -1542,7 +1516,6 @@ const firebaseConfig = {
           return grouped;
         });
 
-        // Navigation Handlers
         function goToToday() {
           const now = new Date();
           currentDate.value = now;
@@ -1626,7 +1599,6 @@ const firebaseConfig = {
           });
         }
 
-        // Category & Utility Helpers
         const allCategoriesSelected = computed(() => selectedCategoryIds.value.length === categories.value.length);
         
         function toggleAllCategories() {
