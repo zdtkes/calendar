@@ -4,7 +4,6 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>彰化縣土庫國小 115 學年度上學期行事曆</title>
-  
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- Vue 3 CDN (jsDelivr) -->
@@ -33,236 +32,356 @@
     }
   </script>
   <style>
-    [v-cloak] { display: none !important; }
+    [v-cloak] {
+      display: none !important;
+    }
     body {
       font-family: 'Inter', 'Noto Sans TC', sans-serif;
       -webkit-tap-highlight-color: transparent;
       touch-action: manipulation;
     }
+    /* Mobile scrolling & touch smoothness */
     .custom-scrollbar {
       -webkit-overflow-scrolling: touch;
     }
+    @media (max-width: 639px) {
+      input, select, textarea {
+        font-size: 16px !important;
+      }
+    }
+    .pb-safe {
+      padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+    }
+    .pt-safe {
+      padding-top: max(0.75rem, env(safe-area-inset-top));
+    }
     .custom-scrollbar::-webkit-scrollbar {
-      width: 6px;
-      height: 6px;
+      width: 4px;
+      height: 4px;
     }
     .custom-scrollbar::-webkit-scrollbar-track {
-      background: transparent;
+      background: #f1f5f9;
     }
     .custom-scrollbar::-webkit-scrollbar-thumb {
       background: #cbd5e1;
-      border-radius: 10px;
+      border-radius: 4px;
     }
-    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-      background: #94a3b8;
-    }
-    @media (max-width: 639px) {
-      input, select, textarea {
-        font-size: 16px !important; /* Prevent iOS zoom on focus */
-      }
-    }
-    .pb-safe { padding-bottom: max(0.75rem, env(safe-area-inset-bottom)); }
-    .pt-safe { padding-top: max(0.75rem, env(safe-area-inset-top)); }
-    
     .calendar-grid {
       display: grid;
       grid-template-columns: repeat(7, minmax(0, 1fr));
     }
-    
+    /* Optimized hardware-accelerated drawer animation */
     @keyframes slideUp {
-      from { transform: translate3d(0, 100%, 0); opacity: 0; }
-      to { transform: translate3d(0, 0, 0); opacity: 1; }
+      from { transform: translate3d(0, 100%, 0); }
+      to { transform: translate3d(0, 0, 0); }
     }
     .animate-slide-up {
-      animation: slideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-      will-change: transform, opacity;
-    }
-    @keyframes fadeIn {
-      from { opacity: 0; }
-      to { opacity: 1; }
-    }
-    .animate-fade-in {
-      animation: fadeIn 0.2s ease-out forwards;
+      animation: slideUp 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      will-change: transform;
     }
   </style>
 </head>
-<body class="bg-gray-50 text-gray-800 antialiased w-screen h-screen overflow-hidden flex flex-col select-none sm:select-auto m-0 p-0">
-  
-  <div id="app" class="w-full h-full flex flex-col overflow-hidden relative" v-cloak>
+<body class="bg-gray-50 text-gray-800 antialiased h-screen overflow-hidden flex flex-col select-none sm:select-auto">
+  <div id="app" class="h-full flex flex-col overflow-hidden" v-cloak>
     
-    <!-- Toast Notification -->
-    <div v-if="toast.show" 
-         class="fixed top-4 left-1/2 -translate-x-1/2 z-[100] px-4 py-2.5 rounded-xl shadow-lg border text-xs sm:text-sm font-semibold flex items-center space-x-2 transition-all duration-200 animate-slide-up"
-         :class="{
-           'bg-emerald-800 text-white border-emerald-700': toast.type === 'success',
-           'bg-red-800 text-white border-red-700': toast.type === 'error',
-           'bg-amber-800 text-white border-amber-700': toast.type === 'warning'
-         }">
-      <i class="fa-solid" :class="{
-        'fa-circle-check': toast.type === 'success',
-        'fa-circle-exclamation': toast.type === 'error',
-        'fa-triangle-exclamation': toast.type === 'warning'
-      }"></i>
-      <span>{{ toast.message }}</span>
-    </div>
-
-    <!-- Header -->
-    <header class="bg-white border-b border-gray-200 px-3 sm:px-4 py-2 sm:py-2.5 flex items-center justify-between shadow-xs z-20 flex-shrink-0 pt-safe w-full">
+    <!-- Top Header Navigation -->
+    <header class="bg-white border-b border-gray-200 px-3 sm:px-4 py-2 sm:py-2.5 flex items-center justify-between shadow-xs z-20 flex-shrink-0 pt-safe">
       <div class="flex items-center space-x-2 sm:space-x-3">
-        <div class="w-8 h-8 sm:w-9 sm:h-9 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold text-lg sm:text-xl shadow-xs">
-          土
-        </div>
-        <div>
-          <h1 class="text-sm sm:text-base font-bold text-gray-800 leading-tight truncate max-w-[140px] xs:max-w-[180px] sm:max-w-none">土庫國小行事曆</h1>
-          <p class="text-[10px] sm:text-xs text-gray-500 hidden xs:block">115 學年度上學期</p>
+        <button @click="sidebarOpen = !sidebarOpen" class="p-2 -ml-1 text-gray-600 hover:bg-gray-100 active:bg-gray-200 rounded-lg transition-colors duration-150 flex items-center justify-center w-10 h-10" title="開啟選單與篩選">
+          <i class="fa-solid fa-bars text-lg"></i>
+        </button>
+        <div class="flex items-center space-x-2">
+          <div class="w-8 h-8 sm:w-9 sm:h-9 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold text-lg sm:text-xl shadow-xs">
+            土
+          </div>
+          <div>
+            <h1 class="text-sm sm:text-base font-bold text-gray-800 leading-tight truncate max-w-[140px] xs:max-w-[180px] sm:max-w-none">土庫國小行事曆</h1>
+            <p class="text-[10px] sm:text-xs text-gray-500 hidden xs:block">115 學年度上學期</p>
+          </div>
         </div>
       </div>
 
-      <!-- Date Navigation -->
+      <!-- Navigation & Date Title Controls -->
       <div class="flex items-center space-x-1 sm:space-x-3">
-        <button @click="goToToday" class="px-2.5 py-1.5 border border-blue-500 bg-blue-50 text-blue-700 rounded-lg text-xs font-bold hover:bg-blue-100 active:bg-blue-200 transition-colors duration-150 shadow-2xs flex items-center space-x-1 hidden sm:flex">
+        <button @click="goToToday" class="px-2.5 py-1.5 border border-blue-500 bg-blue-50 text-blue-700 rounded-lg text-xs font-bold hover:bg-blue-100 active:bg-blue-200 transition-colors duration-150 shadow-2xs flex items-center space-x-1">
           <i class="fa-solid fa-calendar-day text-xs"></i>
           <span>今天</span>
         </button>
-        <button @click="goToToday" class="sm:hidden p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg">
-          <i class="fa-solid fa-calendar-day"></i>
-        </button>
         <div class="flex items-center">
-          <button @click="navigatePrev" class="w-8 h-8 hover:bg-gray-100 active:bg-gray-200 rounded-full text-gray-600 flex items-center justify-center transition-colors">
-            <i class="fa-solid fa-chevron-left text-sm"></i>
+          <button @click="navigatePrev" class="w-8 h-8 sm:w-9 sm:h-9 hover:bg-gray-100 active:bg-gray-200 rounded-full text-gray-600 transition-colors duration-150 flex items-center justify-center" title="上一期">
+            <i class="fa-solid fa-chevron-left text-xs sm:text-sm"></i>
           </button>
-          <h2 class="text-sm sm:text-lg font-bold text-gray-800 min-w-[100px] sm:min-w-[140px] text-center truncate select-none">
+          <h2 class="text-xs sm:text-lg font-bold text-gray-800 min-w-[90px] sm:min-w-[130px] text-center truncate">
             {{ currentPeriodTitle }}
           </h2>
-          <button @click="navigateNext" class="w-8 h-8 hover:bg-gray-100 active:bg-gray-200 rounded-full text-gray-600 flex items-center justify-center transition-colors">
-            <i class="fa-solid fa-chevron-right text-sm"></i>
+          <button @click="navigateNext" class="w-8 h-8 sm:w-9 sm:h-9 hover:bg-gray-100 active:bg-gray-200 rounded-full text-gray-600 transition-colors duration-150 flex items-center justify-center" title="下一期">
+            <i class="fa-solid fa-chevron-right text-xs sm:text-sm"></i>
           </button>
         </div>
       </div>
 
-      <!-- Right Header Actions -->
-      <div class="flex items-center space-x-2 sm:space-x-3">
-        <!-- Search -->
-        <div class="relative hidden lg:block w-56">
+      <div class="flex items-center space-x-1.5 sm:space-x-3">
+        <!-- Search Input (Desktop) -->
+        <div class="relative hidden md:block w-48 lg:w-60">
           <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
-          <input type="text" v-model="searchQuery" placeholder="搜尋活動..."
-                 class="w-full pl-9 pr-7 py-1.5 bg-gray-100 border border-transparent rounded-lg text-sm focus:bg-white focus:border-blue-500 focus:outline-none transition-colors">
-          <button v-if="searchQuery" @click="searchQuery = ''" class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-1">
+          <input type="text" v-model="searchQuery" @input="onSearchInput" placeholder="搜尋全學期活動..."
+                 class="w-full pl-9 pr-7 py-1.5 bg-gray-100 border border-transparent rounded-lg text-sm focus:bg-white focus:border-blue-500 focus:outline-none transition-colors duration-150">
+          <button v-if="searchQuery" @click="clearSearch" class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-1">
             <i class="fa-solid fa-xmark text-xs"></i>
           </button>
         </div>
 
+        <!-- Cloud Sync Badge (Desktop/Tablet) -->
+        <button @click="openFirebaseModal" 
+                class="hidden lg:flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 hover:bg-blue-50 border border-gray-200 transition-colors duration-150 cursor-pointer"
+                title="查看/更換 Firebase 金鑰">
+          <span class="w-2 h-2 rounded-full" :class="{
+            'bg-green-500 animate-pulse': syncStatus === 'synced',
+            'bg-amber-500 animate-spin': syncStatus === 'syncing',
+            'bg-blue-500': syncStatus === 'offline',
+            'bg-red-500': syncStatus === 'error'
+          }"></span>
+          <span class="text-gray-600 font-semibold">{{ syncStatusText }}</span>
+          <i class="fa-solid fa-gear text-gray-400 hover:text-blue-600 text-xs ml-1"></i>
+        </button>
+
         <!-- View Switcher (Desktop) -->
         <div class="hidden sm:flex bg-gray-100 p-1 rounded-lg border border-gray-200 text-xs font-medium">
-          <button @click="currentView = 'month'" :class="{'bg-white shadow-2xs text-blue-600 font-bold': currentView === 'month', 'text-gray-600 hover:text-gray-900': currentView !== 'month'}" class="px-2.5 py-1 rounded-md transition-colors">月曆</button>
-          <button @click="currentView = 'week'" :class="{'bg-white shadow-2xs text-blue-600 font-bold': currentView === 'week', 'text-gray-600 hover:text-gray-900': currentView !== 'week'}" class="px-2.5 py-1 rounded-md transition-colors">週曆</button>
-          <button @click="currentView = 'day'" :class="{'bg-white shadow-2xs text-blue-600 font-bold': currentView === 'day', 'text-gray-600 hover:text-gray-900': currentView !== 'day'}" class="px-2.5 py-1 rounded-md transition-colors">日曆</button>
-          <button @click="currentView = 'agenda'" :class="{'bg-white shadow-2xs text-blue-600 font-bold': currentView === 'agenda', 'text-gray-600 hover:text-gray-900': currentView !== 'agenda'}" class="px-2.5 py-1 rounded-md transition-colors">列表</button>
+          <button @click="switchView('month')" :class="{'bg-white shadow-2xs text-blue-600 font-bold': currentView === 'month', 'text-gray-600 hover:text-gray-900': currentView !== 'month'}" class="px-2.5 py-1 rounded-md transition-colors duration-150">月曆</button>
+          <button @click="switchView('week')" :class="{'bg-white shadow-2xs text-blue-600 font-bold': currentView === 'week', 'text-gray-600 hover:text-gray-900': currentView !== 'week'}" class="px-2.5 py-1 rounded-md transition-colors duration-150">週視圖</button>
+          <button @click="switchView('day')" :class="{'bg-white shadow-2xs text-blue-600 font-bold': currentView === 'day', 'text-gray-600 hover:text-gray-900': currentView !== 'day'}" class="px-2.5 py-1 rounded-md transition-colors duration-150">日檢視</button>
+          <button @click="switchView('agenda')" :class="{'bg-white shadow-2xs text-blue-600 font-bold': currentView === 'agenda', 'text-gray-600 hover:text-gray-900': currentView !== 'agenda'}" class="px-2.5 py-1 rounded-md transition-colors duration-150">列表預告</button>
         </div>
 
         <!-- Admin Auth Button -->
-        <button @click="toggleAdminAuth" :class="isAdmin ? 'bg-amber-100 text-amber-800 border-amber-300' : 'bg-gray-100 text-gray-600 border-gray-300 hover:bg-gray-200'" class="flex items-center space-x-1 px-2 py-1.5 border rounded-lg text-xs font-medium transition-colors">
+        <button @click="toggleAdminAuth" :class="isAdmin ? 'bg-amber-100 text-amber-800 border-amber-300' : 'bg-gray-100 text-gray-600 border-gray-300 hover:bg-gray-200'" class="flex items-center space-x-1 px-2.5 py-1.5 border rounded-lg text-xs font-medium transition-colors duration-150">
           <i class="fa-solid" :class="isAdmin ? 'fa-lock-open text-amber-600' : 'fa-lock'"></i>
-          <span class="hidden md:inline">{{ isAdmin ? '管理員' : '登入' }}</span>
+          <span class="hidden md:inline">{{ isAdmin ? '管理員已驗證' : '管理登入' }}</span>
+        </button>
+
+        <!-- Add Event Button (Desktop) -->
+        <button @click="openAddModal()" class="hidden sm:flex items-center space-x-1 bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg shadow-xs font-medium text-xs sm:text-sm transition-colors duration-150">
+          <i class="fa-solid fa-plus text-xs"></i>
+          <span>新增</span>
         </button>
       </div>
     </header>
 
-    <!-- Search Banner -->
-    <div v-if="searchQuery" class="bg-amber-50 border-b border-amber-200 px-4 py-2 flex items-center justify-between text-xs text-amber-900 z-10 shrink-0 w-full">
-      <div class="flex items-center space-x-2 truncate">
-        <i class="fa-solid fa-magnifying-glass text-amber-600"></i>
-        <span>搜尋「<strong>{{ searchQuery }}</strong>」：共 {{ filteredEvents.length }} 項結果</span>
+    <!-- Global Search Banner Alert -->
+    <div v-if="searchQuery" class="bg-amber-50 border-b border-amber-200 px-3 sm:px-4 py-2 flex items-center justify-between text-xs text-amber-900 z-10">
+      <div class="flex items-center space-x-1.5 truncate">
+        <i class="fa-solid fa-magnifying-glass text-amber-600 flex-shrink-0"></i>
+        <span class="truncate">搜尋「<strong>{{ searchQuery }}</strong>」結果：共 <strong>{{ filteredEvents.length }}</strong> 項</span>
       </div>
-      <button @click="searchQuery = ''" class="ml-2 text-amber-700 font-bold underline whitespace-nowrap">清除</button>
+      <button @click="clearSearch" class="ml-2 text-amber-700 hover:text-amber-950 font-bold underline flex-shrink-0 text-xs">
+        清除搜尋
+      </button>
     </div>
 
-    <!-- Main Content Body (Full Width) -->
-    <div class="flex flex-1 overflow-hidden relative pb-14 sm:pb-0 w-full bg-white">
+    <!-- Main Content Body -->
+    <div class="flex flex-1 overflow-hidden relative pb-16 sm:pb-0">
       
-      <main class="flex-1 flex flex-col w-full h-full overflow-hidden">
+      <!-- Sidebar / Left Drawer Panel -->
+      <aside :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'"
+             class="fixed lg:static inset-y-0 left-0 z-40 w-72 xs:w-80 lg:w-72 bg-white border-r border-gray-200 flex flex-col transition-transform duration-200 ease-out shadow-xl lg:shadow-none flex-shrink-0 transform-gpu">
+        
+        <div class="p-4 flex items-center justify-between border-b border-gray-100 lg:hidden">
+          <span class="font-bold text-gray-800 text-base"><i class="fa-solid fa-sliders text-blue-600 mr-2"></i>篩選與設定</span>
+          <button @click="sidebarOpen = false" class="p-2 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors">
+            <i class="fa-solid fa-xmark text-lg"></i>
+          </button>
+        </div>
+
+        <div class="p-4 flex flex-col space-y-5 overflow-y-auto custom-scrollbar flex-1 pb-20 sm:pb-4">
+          
+          <!-- Mobile Search Input inside drawer -->
+          <div class="block md:hidden">
+            <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">關鍵字搜尋</label>
+            <div class="relative w-full">
+              <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+              <input type="text" v-model="searchQuery" @input="onSearchInput" placeholder="搜尋全學期活動..."
+                     class="w-full pl-9 pr-8 py-2 bg-gray-100 border border-transparent rounded-lg text-sm focus:bg-white focus:border-blue-500 focus:outline-none">
+              <button v-if="searchQuery" @click="clearSearch" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 p-1">
+                <i class="fa-solid fa-xmark text-sm"></i>
+              </button>
+            </div>
+          </div>
+
+          <!-- Quick Today Card -->
+          <div class="bg-blue-600 text-white rounded-xl p-3.5 shadow-xs space-y-1">
+            <div class="flex items-center justify-between text-xs opacity-90">
+              <span><i class="fa-solid fa-clock mr-1"></i>今日日期</span>
+              <span class="bg-white/20 px-2 py-0.5 rounded font-mono font-bold">Today</span>
+            </div>
+            <div class="text-sm sm:text-base font-bold pt-0.5">
+              {{ todayFormattedDisplay }}
+            </div>
+            <button @click="goToToday(); sidebarOpen = false;" class="w-full mt-2 py-1.5 bg-white text-blue-700 rounded-lg text-xs font-bold hover:bg-blue-50 active:bg-blue-100 transition-colors duration-150 shadow-2xs">
+              跳回今天月曆
+            </button>
+          </div>
+
+          <!-- Category Filter -->
+          <div>
+            <div class="flex items-center justify-between mb-2">
+              <h3 class="text-xs font-bold text-gray-500 uppercase tracking-wider">分類篩選</h3>
+              <button @click="toggleAllCategories" class="text-xs text-blue-600 hover:underline">
+                {{ allCategoriesSelected ? '全部取消' : '全選' }}
+              </button>
+            </div>
+            <div class="space-y-1">
+              <label v-for="cat in categories" :key="cat.id" class="flex items-center space-x-2.5 text-xs font-medium text-gray-700 hover:bg-gray-50 active:bg-gray-100 p-2 rounded-lg cursor-pointer transition-colors duration-150">
+                <input type="checkbox" :value="cat.id" v-model="selectedCategoryIds" class="rounded text-blue-600 focus:ring-blue-500 h-4 w-4">
+                <span class="w-3 h-3 rounded-full flex-shrink-0" :style="{ backgroundColor: cat.bgColor }"></span>
+                <span class="flex-1 truncate">{{ cat.name }}</span>
+                <span class="text-[10px] bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded-full font-mono">
+                  {{ getCategoryCount(cat.id) }}
+                </span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Department Filter -->
+          <div>
+            <h3 class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">承辦單位</h3>
+            <div class="grid grid-cols-2 gap-1">
+              <label v-for="dept in departments" :key="dept" class="flex items-center space-x-2 text-xs font-medium text-gray-700 hover:bg-gray-50 p-2 rounded-lg cursor-pointer transition-colors duration-150">
+                <input type="checkbox" :value="dept" v-model="selectedDepartments" class="rounded text-blue-600 focus:ring-blue-500 h-4 w-4">
+                <span class="truncate">{{ dept }}</span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Milestones Summary -->
+          <div class="bg-blue-50 border border-blue-100 rounded-xl p-3 text-xs text-blue-900 space-y-1.5">
+            <div class="font-bold flex items-center text-blue-800">
+              <i class="fa-solid fa-star text-amber-500 mr-1.5"></i> 學期重點行程
+            </div>
+            <p><strong class="text-blue-950">期中評量：</strong>115/11/04 - 11/05</p>
+            <p><strong class="text-blue-950">校慶運動會：</strong>115/11/12</p>
+            <p><strong class="text-blue-950">期末評量：</strong>116/01/13 - 01/14</p>
+            <p><strong class="text-blue-950">休業式典禮：</strong>116/01/19</p>
+            <p><strong class="text-blue-950">戶外露營：</strong>116/01/26 - 01/27</p>
+          </div>
+
+          <!-- Cloud Sync & Reset -->
+          <div class="border-t border-gray-200 pt-3 text-xs space-y-2 text-gray-500">
+            <div class="flex items-center justify-between">
+              <span class="font-bold text-gray-600"><i class="fa-solid fa-cloud mr-1 text-blue-600"></i>雲端資料庫</span>
+              <button @click="openFirebaseModal" class="px-2 py-1 rounded text-xs font-bold bg-blue-100 hover:bg-blue-200 text-blue-700 transition-colors duration-150">
+                金鑰設定
+              </button>
+            </div>
+            <button @click="resetToDefaultData" class="w-full py-2 px-2 bg-gray-100 hover:bg-gray-200 active:bg-gray-300 text-gray-700 rounded-lg text-xs transition-colors duration-150 flex items-center justify-center space-x-1">
+              <i class="fa-solid fa-rotate-left"></i>
+              <span>重置為預設行事曆</span>
+            </button>
+          </div>
+
+        </div>
+      </aside>
+
+      <!-- Overlay for Mobile Sidebar -->
+      <div v-if="sidebarOpen" @click="sidebarOpen = false" class="fixed inset-0 bg-gray-900/40 z-30 lg:hidden"></div>
+
+      <!-- Right Main Workspace -->
+      <main class="flex-1 flex flex-col bg-white overflow-hidden">
         
         <!-- MONTH VIEW -->
-        <div v-if="currentView === 'month'" class="flex-1 flex flex-col h-full w-full overflow-hidden animate-fade-in">
+        <div v-if="currentView === 'month'" class="flex-1 flex flex-col h-full overflow-hidden">
           <!-- Weekday Headers -->
-          <div class="calendar-grid w-full border-b border-gray-200 bg-gray-50 text-center text-[11px] sm:text-xs font-bold text-gray-500 py-2">
-            <span class="text-red-500">日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span class="text-blue-500">六</span>
+          <div class="calendar-grid border-b border-gray-200 bg-gray-50 text-center text-[11px] sm:text-xs font-bold text-gray-500 py-1.5 sm:py-2">
+            <span class="text-red-500">日</span>
+            <span>一</span>
+            <span>二</span>
+            <span>三</span>
+            <span>四</span>
+            <span>五</span>
+            <span class="text-blue-500">六</span>
           </div>
 
           <!-- Month Grid Cells -->
-          <div class="calendar-grid w-full flex-1 grid-rows-6 auto-rows-fr overflow-y-auto custom-scrollbar bg-gray-200 gap-px border-b border-gray-200">
+          <div class="calendar-grid flex-1 grid-rows-6 auto-rows-fr overflow-y-auto custom-scrollbar">
             <div v-for="(day, idx) in monthViewDays" :key="idx"
                  @click="handleDayClick(day.date)"
                  :class="[
-                   'p-1 flex flex-col transition-colors duration-100 min-h-[70px] sm:min-h-[100px] cursor-pointer relative',
-                   day.isCurrentMonth ? 'bg-white hover:bg-gray-50' : 'bg-gray-50/80 text-gray-400',
-                   day.isToday ? 'bg-blue-50/50' : ''
+                   'border-b border-r border-gray-200 p-0.5 sm:p-1 flex flex-col transition-colors duration-100 active:bg-blue-100/60 min-h-[60px] sm:min-h-[90px] group cursor-pointer relative select-none',
+                   !day.isCurrentMonth ? 'bg-gray-50/60 text-gray-400' : 'bg-white',
+                   day.isToday ? 'bg-blue-50/80 ring-2 ring-blue-500 ring-inset z-10' : ''
                  ]">
               
               <!-- Date Header -->
-              <div class="flex items-center justify-between mb-1">
+              <div class="flex items-center justify-between mb-0.5 px-0.5">
                 <span :class="[
-                  'text-xs sm:text-sm font-medium w-6 h-6 flex items-center justify-center rounded-full',
+                  'text-[11px] sm:text-xs font-bold w-5 h-5 sm:w-6 sm:h-6 flex items-center justify-center rounded-full',
                   day.isToday ? 'bg-blue-600 text-white shadow-xs' : (day.isCurrentMonth ? 'text-gray-700' : 'text-gray-400')
                 ]">
                   {{ day.dayNum }}
                 </span>
-                <!-- Quick add icon for admin hover (Desktop only) -->
-                <i v-if="isAdmin" class="fa-solid fa-plus text-[10px] text-gray-300 hover:text-blue-500 opacity-0 md:group-hover:opacity-100 transition-opacity absolute top-2 right-2"></i>
+                
+                <!-- Desktop Event Count Badge -->
+                <span v-if="day.events.length > 0" class="hidden sm:inline-block text-[10px] text-gray-400 font-mono">
+                  {{ day.events.length }}項
+                </span>
               </div>
 
-              <!-- Events Container (Desktop: List, Mobile: Dots) -->
-              <div class="flex-1 overflow-y-auto custom-scrollbar space-y-1">
-                <!-- Desktop Events -->
-                <div class="hidden sm:block w-full">
-                  <div v-for="evt in day.events.slice(0, 4)" :key="evt.id"
-                       @click.stop="viewEventDetails(evt)"
-                       :style="{ backgroundColor: getCategoryBg(evt.categoryId), color: getCategoryTextColor(evt.categoryId), borderLeft: `3px solid ${getCategoryColor(evt.categoryId)}` }"
-                       class="text-[11px] px-1.5 py-0.5 rounded-r-sm mb-1 truncate shadow-2xs hover:opacity-80 transition-opacity w-full block">
-                    <span v-if="evt.time" class="font-bold mr-1">{{ evt.time }}</span>
-                    <span>{{ evt.title }}</span>
-                  </div>
-                  <div v-if="day.events.length > 4" class="text-[10px] text-gray-500 font-medium px-1">
-                    + 還有 {{ day.events.length - 4 }} 項
-                  </div>
-                </div>
-                
-                <!-- Mobile Events (Dots) -->
-                <div class="sm:hidden flex flex-wrap gap-1 mt-1 px-1">
-                  <span v-for="evt in day.events.slice(0, 5)" :key="'m_'+evt.id"
-                        class="w-2 h-2 rounded-full"
+              <!-- Mobile Event Display (Dots & Count Pills) -->
+              <div class="flex sm:hidden flex-col items-center justify-center flex-1 space-y-1">
+                <div v-if="day.events.length > 0" class="flex flex-wrap items-center justify-center gap-1 px-0.5 max-w-full">
+                  <span v-for="evt in day.events.slice(0, 3)" :key="'m_'+evt.id"
+                        class="w-2 h-2 rounded-full flex-shrink-0"
                         :style="{ backgroundColor: getCategoryColor(evt.categoryId) }"></span>
-                  <span v-if="day.events.length > 5" class="text-[9px] text-gray-500 font-bold">+</span>
+                </div>
+                <span v-if="day.events.length > 0" class="text-[9px] font-bold text-gray-600 bg-gray-100 px-1 rounded">
+                  {{ day.events.length }}項
+                </span>
+              </div>
+
+              <!-- Desktop Event Cards inside cell -->
+              <div class="hidden sm:block flex-1 overflow-y-auto space-y-1 custom-scrollbar max-h-[75px]">
+                <div v-for="evt in day.events.slice(0, 3)" :key="evt.id"
+                     @click.stop="viewEventDetails(evt)"
+                     :style="{ backgroundColor: getCategoryBg(evt.categoryId), color: getCategoryTextColor(evt.categoryId) }"
+                     class="text-[11px] px-1.5 py-0.5 rounded font-medium truncate flex items-center justify-between shadow-2xs hover:opacity-90 transition-opacity duration-150">
+                  <span class="truncate">{{ evt.title }}</span>
+                  <span v-if="evt.time" class="text-[9px] opacity-75 ml-1 flex-shrink-0">{{ evt.time }}</span>
+                </div>
+                <div v-if="day.events.length > 3" class="text-[10px] font-bold text-blue-600 px-1 hover:underline">
+                  + 還有 {{ day.events.length - 3 }} 項
                 </div>
               </div>
+
             </div>
           </div>
         </div>
 
-        <!-- WEEK VIEW -->
-        <div v-else-if="currentView === 'week'" class="flex-1 w-full flex flex-col overflow-x-auto overflow-y-auto custom-scrollbar bg-white animate-fade-in">
-          <div class="min-w-[600px] w-full flex-1 flex flex-col">
+        <!-- WEEK VIEW (Scrollable on Mobile) -->
+        <div v-else-if="currentView === 'week'" class="flex-1 flex flex-col overflow-x-auto overflow-y-auto custom-scrollbar bg-gray-50">
+          <div class="min-w-[640px] sm:min-w-full flex-1 flex flex-col">
             <!-- Week Headers -->
-            <div class="grid grid-cols-7 border-b border-gray-200 bg-gray-50 sticky top-0 z-10 text-center py-2 font-medium text-xs text-gray-600 w-full">
-              <div v-for="wDay in weekViewDays" :key="wDay.dateStr" class="p-1">
-                <div :class="{'text-blue-600': wDay.isToday}">{{ wDay.weekDayName }}</div>
-                <div :class="wDay.isToday ? 'bg-blue-600 text-white w-7 h-7 mx-auto rounded-full flex items-center justify-center mt-1 shadow-xs' : 'text-sm mt-1 text-gray-900'">
+            <div class="grid grid-cols-7 border-b border-gray-200 bg-gray-50 sticky top-0 z-10 text-center py-2 font-medium text-xs text-gray-600">
+              <div v-for="wDay in weekViewDays" :key="wDay.dateStr"
+                   :class="{'text-blue-600 font-bold': wDay.isToday}" class="p-1">
+                <div>{{ wDay.weekDayName }}</div>
+                <div :class="wDay.isToday ? 'bg-blue-600 text-white w-7 h-7 mx-auto rounded-full flex items-center justify-center mt-1 shadow-xs' : 'text-sm font-bold mt-1'">
                   {{ wDay.dayNum }}
                 </div>
               </div>
             </div>
 
             <!-- Week Day Columns -->
-            <div class="grid grid-cols-7 w-full flex-1 min-h-[500px] divide-x divide-gray-200">
+            <div class="grid grid-cols-7 flex-1 min-h-[450px] divide-x divide-gray-200 bg-white">
               <div v-for="wDay in weekViewDays" :key="wDay.dateStr" 
                    @click="handleDayClick(wDay.date)"
-                   class="p-1.5 space-y-2 hover:bg-gray-50 cursor-pointer transition-colors h-full w-full">
+                   class="p-1.5 space-y-2 hover:bg-gray-50/50 cursor-pointer transition-colors duration-100">
                 <div v-for="evt in wDay.events" :key="evt.id"
                      @click.stop="viewEventDetails(evt)"
-                     :style="{ borderLeftColor: getCategoryColor(evt.categoryId), backgroundColor: getCategoryBg(evt.categoryId) }"
-                     class="p-1.5 rounded-r border-l-4 shadow-2xs hover:shadow transition-shadow w-full">
-                  <div class="text-[11px] font-bold text-gray-800 leading-tight w-full break-words">{{ evt.title }}</div>
-                  <div v-if="evt.time" class="text-[10px] text-gray-600 mt-0.5"><i class="fa-regular fa-clock mr-0.5"></i>{{ evt.time }}</div>
+                     :style="{ borderLeftColor: getCategoryColor(evt.categoryId) }"
+                     class="p-1.5 rounded bg-gray-50 border-l-4 shadow-2xs hover:shadow transition-shadow duration-150">
+                  <div class="text-xs font-bold text-gray-800 leading-tight truncate">{{ evt.title }}</div>
+                  <div class="flex items-center space-x-1 text-[10px] text-gray-500 mt-1">
+                    <span class="bg-gray-200 text-gray-700 px-1 rounded truncate">{{ evt.department }}</span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -270,70 +389,124 @@
         </div>
 
         <!-- DAY VIEW -->
-        <div v-else-if="currentView === 'day'" class="flex-1 w-full p-4 sm:p-6 overflow-y-auto custom-scrollbar bg-gray-50 animate-fade-in">
-          <div class="max-w-4xl mx-auto w-full bg-white rounded-xl shadow-xs border border-gray-200 p-4 sm:p-6">
-            <div class="flex items-center justify-between border-b pb-4 mb-4">
+        <div v-else-if="currentView === 'day'" class="flex-1 p-3 sm:p-6 overflow-y-auto custom-scrollbar bg-gray-50">
+          <div class="max-w-3xl mx-auto bg-white rounded-xl shadow-xs border border-gray-200 p-4 sm:p-6">
+            <div class="flex items-center justify-between border-b pb-3 mb-4">
               <div>
-                <h3 class="text-xl sm:text-2xl font-bold text-gray-900">{{ formatFullDate(selectedDate) }}</h3>
-                <p class="text-sm text-gray-500 mt-1">排定行程概覽</p>
+                <h3 class="text-lg sm:text-2xl font-bold text-gray-900 leading-tight">{{ formatFullDate(selectedDate) }}</h3>
+                <p class="text-xs text-gray-500 mt-0.5">當日排定行程概覽</p>
               </div>
-              <button v-if="isAdmin" @click="openAddModal(formatDateStr(selectedDate))" class="bg-blue-50 text-blue-600 hover:bg-blue-100 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors">
+              <button @click="openAddModal(selectedDateStr)" class="bg-blue-600 text-white px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-blue-700 transition-colors duration-150">
                 <i class="fa-solid fa-plus mr-1"></i> 新增
               </button>
             </div>
 
-            <div v-if="dayViewEvents.length === 0" class="text-center py-12">
-              <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                <i class="fa-regular fa-calendar-xmark text-2xl text-gray-400"></i>
-              </div>
-              <p class="text-gray-500 font-medium">本日無預定行程</p>
-              <button v-if="isAdmin" @click="openAddModal(formatDateStr(selectedDate))" class="mt-4 text-blue-600 text-sm font-medium hover:underline">點此新增行程</button>
+            <div v-if="dayViewEvents.length === 0" class="text-center py-12 text-gray-400">
+              <i class="fa-regular fa-calendar-xmark text-4xl mb-2"></i>
+              <p class="text-xs sm:text-sm">本日無預定行事活動</p>
             </div>
 
-            <div v-else class="space-y-3 w-full">
-              <div v-for="evt in dayViewEvents" :key="evt.id" 
+            <div v-else class="space-y-2.5">
+              <div v-for="evt in dayViewEvents" :key="evt.id"
                    @click="viewEventDetails(evt)"
-                   class="flex items-start p-3 w-full rounded-lg border border-gray-100 hover:border-blue-200 hover:shadow-md transition-all cursor-pointer bg-white group">
-                <div class="w-2 h-2 mt-2 rounded-full mr-3 shrink-0" :style="{ backgroundColor: getCategoryColor(evt.categoryId) }"></div>
+                   class="flex items-center p-3 sm:p-4 bg-white border border-gray-200 rounded-lg shadow-2xs hover:border-blue-300 transition-colors duration-150 cursor-pointer">
+                <div class="w-2.5 h-10 rounded-full mr-3 flex-shrink-0" :style="{ backgroundColor: getCategoryColor(evt.categoryId) }"></div>
                 <div class="flex-1 min-w-0">
-                  <h4 class="text-base font-bold text-gray-900 group-hover:text-blue-700 transition-colors truncate">{{ evt.title }}</h4>
-                  <div class="flex flex-wrap items-center gap-3 mt-1.5 text-xs text-gray-500">
-                    <span v-if="evt.time" class="flex items-center"><i class="fa-regular fa-clock mr-1"></i> {{ evt.time }}</span>
-                    <span class="flex items-center"><i class="fa-solid fa-building mr-1"></i> {{ evt.department }}</span>
-                    <span class="px-2 py-0.5 rounded text-[10px] font-bold" :style="{ backgroundColor: getCategoryBg(evt.categoryId), color: getCategoryTextColor(evt.categoryId) }">
+                  <div class="flex items-center justify-between">
+                    <h4 class="text-sm sm:text-base font-bold text-gray-800 truncate">{{ evt.title }}</h4>
+                    <span class="text-[10px] sm:text-xs px-2 py-0.5 rounded font-medium flex-shrink-0 ml-2" :style="{ backgroundColor: getCategoryBg(evt.categoryId), color: getCategoryTextColor(evt.categoryId) }">
                       {{ getCategoryName(evt.categoryId) }}
                     </span>
                   </div>
+                  <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-500 mt-1.5">
+                    <span v-if="evt.time"><i class="fa-regular fa-clock mr-1"></i>{{ evt.time }}</span>
+                    <span><i class="fa-solid fa-building-user mr-1"></i>{{ evt.department }}</span>
+                    <span v-if="evt.location"><i class="fa-solid fa-location-dot mr-1"></i>{{ evt.location }}</span>
+                  </div>
+                </div>
+                <!-- Direct Edit & Delete buttons -->
+                <div class="flex items-center space-x-1 ml-2 flex-shrink-0" @click.stop>
+                  <button @click.stop="openEditModal(evt)" class="p-2 text-xs text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors duration-150" title="編輯">
+                    <i class="fa-solid fa-pen-to-square"></i>
+                  </button>
+                  <button @click.stop="confirmDeleteEvent(evt)" class="p-2 text-xs text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors duration-150" title="刪除">
+                    <i class="fa-solid fa-trash-can"></i>
+                  </button>
                 </div>
               </div>
             </div>
           </div>
         </div>
 
-        <!-- AGENDA VIEW -->
-        <div v-else-if="currentView === 'agenda'" class="flex-1 w-full p-4 sm:p-6 overflow-y-auto custom-scrollbar bg-white animate-fade-in">
-          <div class="max-w-4xl mx-auto w-full space-y-6">
-            <h3 class="text-lg font-bold text-gray-800 border-b pb-2">活動列表 (依日期排序)</h3>
+        <!-- AGENDA / LIST VIEW -->
+        <div v-else-if="currentView === 'agenda'" class="flex-1 p-3 sm:p-6 overflow-y-auto custom-scrollbar bg-gray-50">
+          <div class="max-w-4xl mx-auto space-y-4 sm:space-y-6">
             
-            <div v-if="agendaEvents.length === 0" class="text-center py-10 text-gray-500">
-              無即將到來的活動。
+            <!-- Agenda Mode Toggle Banner -->
+            <div class="bg-white rounded-xl p-3 sm:p-4 shadow-2xs border border-gray-200 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+              <div>
+                <h3 class="text-sm sm:text-lg font-bold text-gray-800 flex items-center">
+                  <i class="fa-solid fa-calendar-week text-blue-600 mr-2"></i>
+                  {{ agendaFilterMode === 'twoWeeks' ? '當週與下一週預告行程' : '全學期所有預定行程' }}
+                </h3>
+                <p class="text-[11px] sm:text-xs text-gray-500 mt-0.5">
+                  {{ agendaSubtitleText }}
+                </p>
+              </div>
+
+              <!-- Scope Buttons -->
+              <div class="flex bg-gray-100 p-1 rounded-lg text-xs font-semibold self-stretch">
+                <button @click="agendaFilterMode = 'twoWeeks'" 
+                        :class="agendaFilterMode === 'twoWeeks' ? 'bg-blue-600 text-white shadow-2xs' : 'text-gray-600 hover:text-gray-900'"
+                        class="flex-1 px-2.5 py-1.5 rounded-md transition-colors duration-150 flex items-center justify-center space-x-1">
+                  <i class="fa-solid fa-clock-rotate-left text-[11px]"></i>
+                  <span>兩週預告</span>
+                </button>
+                <button @click="agendaFilterMode = 'all'" 
+                        :class="agendaFilterMode === 'all' ? 'bg-blue-600 text-white shadow-2xs' : 'text-gray-600 hover:text-gray-900'"
+                        class="flex-1 px-2.5 py-1.5 rounded-md transition-colors duration-150 flex items-center justify-center space-x-1">
+                  <i class="fa-solid fa-list-check text-[11px]"></i>
+                  <span>全學期</span>
+                </button>
+              </div>
             </div>
 
-            <div v-else class="space-y-4 w-full">
-              <div v-for="(group, dateStr) in groupedAgendaEvents" :key="dateStr" class="w-full">
-                <h4 class="text-sm font-bold text-gray-900 mb-2 sticky top-0 bg-white py-1 z-10">{{ formatFullDate(new Date(dateStr)) }}</h4>
-                <div class="space-y-2 pl-2 sm:pl-4 border-l-2 border-gray-100 ml-1 sm:ml-2 w-full">
-                  <div v-for="evt in group" :key="evt.id" 
-                       @click="viewEventDetails(evt)"
-                       class="p-3 w-full bg-gray-50 hover:bg-blue-50 rounded-lg border border-gray-100 cursor-pointer transition-colors flex items-center justify-between group">
-                    <div class="flex items-center flex-1 min-w-0 pr-4">
-                      <div class="w-1.5 h-6 rounded-full mr-3 shrink-0" :style="{ backgroundColor: getCategoryColor(evt.categoryId) }"></div>
-                      <div class="min-w-0">
-                        <div class="font-bold text-gray-800 text-sm group-hover:text-blue-700 truncate">{{ evt.title }}</div>
-                        <div class="text-xs text-gray-500 mt-0.5 truncate">{{ evt.department }} <span v-if="evt.time">· {{ evt.time }}</span></div>
+            <div v-if="Object.keys(groupedAgendaEvents).length === 0" class="bg-white rounded-xl p-8 sm:p-12 text-center text-gray-400 border border-gray-200 shadow-2xs">
+              <i class="fa-regular fa-folder-open text-3xl sm:text-4xl mb-2 text-gray-300"></i>
+              <p class="text-xs sm:text-sm font-medium">指定範圍內未找到行程</p>
+              <button v-if="agendaFilterMode === 'twoWeeks'" @click="agendaFilterMode = 'all'" class="mt-2 text-xs text-blue-600 font-bold hover:underline">
+                切換為全學期查看
+              </button>
+            </div>
+
+            <div v-else class="space-y-3 sm:space-y-4">
+              <div v-for="(group, dateKey) in groupedAgendaEvents" :key="dateKey" class="bg-white rounded-xl shadow-2xs border border-gray-200 overflow-hidden">
+                <!-- Date Header -->
+                <div class="bg-gray-100/90 px-3 sm:px-4 py-2 border-b border-gray-200 flex items-center justify-between">
+                  <button @click="jumpToDateAndDetail(dateKey)" class="font-bold text-xs sm:text-sm text-blue-700 hover:underline flex items-center truncate">
+                    <i class="fa-regular fa-calendar-days mr-1.5 text-blue-600 flex-shrink-0"></i>
+                    <span class="truncate">{{ formatDateWithWeekName(dateKey) }}</span>
+                  </button>
+                  <span class="text-[10px] sm:text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full font-semibold font-mono flex-shrink-0 ml-1">{{ group.length }} 項</span>
+                </div>
+
+                <!-- Events List -->
+                <div class="divide-y divide-gray-100">
+                  <div v-for="evt in group" :key="evt.id"
+                       @click="jumpToEventDate(evt)"
+                       class="p-3 hover:bg-blue-50/40 active:bg-blue-100/40 flex items-center justify-between cursor-pointer transition-colors duration-150">
+                    <div class="flex items-center space-x-2.5 min-w-0 flex-1">
+                      <span class="w-2.5 h-2.5 rounded-full flex-shrink-0" :style="{ backgroundColor: getCategoryColor(evt.categoryId) }"></span>
+                      <div class="truncate">
+                        <span class="font-semibold text-xs sm:text-sm text-gray-800 mr-2">{{ evt.title }}</span>
+                        <span class="text-[10px] text-gray-500 bg-gray-100 px-1 rounded border border-gray-200">{{ evt.department }}</span>
                       </div>
                     </div>
-                    <i class="fa-solid fa-chevron-right text-gray-300 group-hover:text-blue-400 text-xs shrink-0"></i>
+                    
+                    <div class="flex items-center space-x-2 text-xs text-gray-500 flex-shrink-0 ml-2">
+                      <span v-if="evt.time" class="font-mono text-[11px] text-gray-600 bg-gray-50 px-1.5 py-0.5 rounded hidden sm:inline">{{ evt.time }}</span>
+                      <i class="fa-solid fa-chevron-right text-gray-300 text-xs"></i>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -344,524 +517,1235 @@
       </main>
     </div>
 
-    <!-- Mobile Bottom Navigation -->
-    <nav class="sm:hidden bg-white border-t border-gray-200 flex justify-around items-center w-full h-14 pb-safe flex-shrink-0 z-30">
-      <button @click="currentView = 'month'" :class="currentView === 'month' ? 'text-blue-600' : 'text-gray-500 hover:text-gray-700'" class="flex flex-col items-center justify-center w-full h-full transition-colors">
-        <i class="fa-regular fa-calendar text-lg mb-1"></i>
-        <span class="text-[10px] font-medium">月曆</span>
+    <!-- MOBILE BOTTOM NAVIGATION BAR -->
+    <nav class="fixed bottom-0 inset-x-0 bg-white border-t border-gray-200 flex items-center justify-around py-1.5 z-30 md:hidden shadow-lg pb-safe">
+      <button @click="switchView('month')" :class="currentView === 'month' ? 'text-blue-600 font-bold' : 'text-gray-500'" class="flex flex-col items-center justify-center w-16 py-1 text-[10px] active:scale-95 transition-transform duration-100">
+        <i class="fa-regular fa-calendar-days text-base mb-0.5"></i>
+        <span>月曆</span>
       </button>
-      <button @click="currentView = 'week'" :class="currentView === 'week' ? 'text-blue-600' : 'text-gray-500 hover:text-gray-700'" class="flex flex-col items-center justify-center w-full h-full transition-colors">
-        <i class="fa-solid fa-calendar-week text-lg mb-1"></i>
-        <span class="text-[10px] font-medium">週曆</span>
+
+      <button @click="switchView('week')" :class="currentView === 'week' ? 'text-blue-600 font-bold' : 'text-gray-500'" class="flex flex-col items-center justify-center w-16 py-1 text-[10px] active:scale-95 transition-transform duration-100">
+        <i class="fa-solid fa-calendar-week text-base mb-0.5"></i>
+        <span>週視圖</span>
       </button>
-      <button @click="currentView = 'day'" :class="currentView === 'day' ? 'text-blue-600' : 'text-gray-500 hover:text-gray-700'" class="flex flex-col items-center justify-center w-full h-full transition-colors">
-        <i class="fa-regular fa-calendar-check text-lg mb-1"></i>
-        <span class="text-[10px] font-medium">日曆</span>
+
+      <button @click="openAddModal()" class="flex flex-col items-center justify-center w-14 active:scale-90 transition-transform duration-100">
+        <div class="w-10 h-10 bg-blue-600 text-white rounded-full flex items-center justify-center shadow-md -mt-4">
+          <i class="fa-solid fa-plus text-base"></i>
+        </div>
+        <span class="text-[10px] text-blue-600 font-bold mt-0.5">新增</span>
       </button>
-      <button @click="currentView = 'agenda'" :class="currentView === 'agenda' ? 'text-blue-600' : 'text-gray-500 hover:text-gray-700'" class="flex flex-col items-center justify-center w-full h-full transition-colors">
-        <i class="fa-solid fa-list-ul text-lg mb-1"></i>
-        <span class="text-[10px] font-medium">列表</span>
+
+      <button @click="switchView('agenda')" :class="currentView === 'agenda' ? 'text-blue-600 font-bold' : 'text-gray-500'" class="flex flex-col items-center justify-center w-16 py-1 text-[10px] active:scale-95 transition-transform duration-100">
+        <i class="fa-solid fa-list-ul text-base mb-0.5"></i>
+        <span>預告</span>
+      </button>
+
+      <button @click="toggleSidebarMobile()" :class="sidebarOpen ? 'text-blue-600 font-bold' : 'text-gray-500'" class="flex flex-col items-center justify-center w-16 py-1 text-[10px] active:scale-95 transition-transform duration-100">
+        <i class="fa-solid fa-sliders text-base mb-0.5"></i>
+        <span>篩選</span>
       </button>
     </nav>
 
-    <!-- Modals Backdrop -->
-    <div v-if="showAdminAuthModal || showEventModal || showAddModal || confirmDialog.show" class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm z-[60] animate-fade-in flex items-center justify-center p-4">
-      
-      <!-- Admin Login Modal -->
-      <div v-if="showAdminAuthModal && !confirmDialog.show" class="bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden animate-slide-up" @click.stop>
-        <div class="px-5 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
-          <h3 class="font-bold text-gray-800 flex items-center"><i class="fa-solid fa-shield-halved text-blue-600 mr-2"></i> 管理員登入</h3>
-          <button @click="showAdminAuthModal = false" class="text-gray-400 hover:text-gray-600"><i class="fa-solid fa-xmark text-lg"></i></button>
-        </div>
-        <div class="p-5">
-          <p class="text-sm text-gray-600 mb-4">請輸入管理員密碼以啟用新增、編輯與刪除等進階功能。</p>
-          <input type="password" v-model="adminPassword" placeholder="輸入密碼" @keyup.enter="loginAdmin"
-                 class="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all">
-          <p v-if="authError" class="text-xs text-red-500 mt-2"><i class="fa-solid fa-circle-exclamation"></i> 密碼錯誤，請重新輸入。</p>
-        </div>
-        <div class="px-5 py-3 bg-gray-50 border-t border-gray-100 flex justify-end space-x-2">
-          <button @click="showAdminAuthModal = false" class="px-4 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-200 rounded-lg transition-colors">取消</button>
-          <button @click="loginAdmin" class="px-4 py-1.5 text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 rounded-lg transition-colors shadow-sm">登入</button>
-        </div>
-      </div>
+    <!-- DAY SUMMARY MODAL -->
+    <div v-if="activeDayModal" class="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-gray-900/50">
+      <div class="bg-white rounded-t-2xl sm:rounded-xl shadow-2xl w-full max-w-lg overflow-hidden border border-gray-100 flex flex-col max-h-[85vh] animate-slide-up sm:animate-none">
+        
+        <div class="w-12 h-1 bg-gray-300 rounded-full mx-auto my-2 sm:hidden"></div>
 
-      <!-- Event Details Modal -->
-      <div v-if="showEventModal && selectedEvent && !showAddModal && !confirmDialog.show" class="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-slide-up" @click.stop>
-        <div class="px-5 py-4 flex justify-between items-start" :style="{ backgroundColor: getCategoryBg(selectedEvent.categoryId) }">
-          <div class="pr-4">
-            <span class="inline-block px-2 py-0.5 rounded text-[10px] font-bold mb-2 shadow-xs" :style="{ backgroundColor: 'white', color: getCategoryTextColor(selectedEvent.categoryId) }">
-              {{ getCategoryName(selectedEvent.categoryId) }}
-            </span>
-            <h3 class="text-xl font-bold text-gray-900 leading-tight">{{ selectedEvent.title }}</h3>
-          </div>
-          <button @click="closeEventModal" class="text-gray-500 hover:text-gray-800 bg-white/60 hover:bg-white rounded-full w-8 h-8 flex items-center justify-center transition-colors shadow-2xs"><i class="fa-solid fa-xmark"></i></button>
-        </div>
-        <div class="p-5 space-y-4">
-          <div class="flex items-center text-sm text-gray-700">
-            <div class="w-8 flex justify-center text-gray-400"><i class="fa-regular fa-calendar text-base"></i></div>
-            <div class="font-medium">{{ formatFullDate(new Date(selectedEvent.date)) }}</div>
-          </div>
-          <div v-if="selectedEvent.time" class="flex items-center text-sm text-gray-700">
-            <div class="w-8 flex justify-center text-gray-400"><i class="fa-regular fa-clock text-base"></i></div>
-            <div class="font-medium">{{ selectedEvent.time }}</div>
-          </div>
-          <div class="flex items-center text-sm text-gray-700">
-            <div class="w-8 flex justify-center text-gray-400"><i class="fa-solid fa-building text-base"></i></div>
-            <div class="font-medium">{{ selectedEvent.department }}</div>
-          </div>
-          <div class="flex items-start text-sm text-gray-700 pt-3 border-t border-gray-100">
-            <div class="w-8 flex justify-center text-gray-400 mt-0.5"><i class="fa-solid fa-align-left text-base"></i></div>
-            <div class="flex-1 whitespace-pre-wrap leading-relaxed min-h-[60px]">{{ selectedEvent.description || '無詳細說明' }}</div>
-          </div>
-        </div>
-        <div v-if="isAdmin" class="px-5 py-3 bg-gray-50 border-t border-gray-100 flex justify-between items-center">
-          <button @click="requestDeleteEvent(selectedEvent.id)" class="px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50 rounded-lg transition-colors flex items-center">
-            <i class="fa-regular fa-trash-can mr-1.5"></i> 刪除
-          </button>
-          <button @click="openEditModal(selectedEvent)" class="px-4 py-1.5 text-sm font-medium bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors shadow-sm flex items-center">
-            <i class="fa-solid fa-pen mr-1.5 text-xs"></i> 編輯
-          </button>
-        </div>
-      </div>
-
-      <!-- Add/Edit Event Modal -->
-      <div v-if="showAddModal && !confirmDialog.show" class="bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden animate-slide-up flex flex-col max-h-[90vh]" @click.stop>
-        <div class="px-5 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50 shrink-0">
-          <h3 class="font-bold text-gray-800 text-lg flex items-center">
-            <i class="fa-solid" :class="editingEvent ? 'fa-pen text-blue-500 mr-2' : 'fa-calendar-plus text-blue-500 mr-2'"></i> 
-            {{ editingEvent ? '編輯活動' : '新增活動' }}
-          </h3>
-          <button @click="closeAddModal" class="text-gray-400 hover:text-gray-600 w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-200 transition-colors"><i class="fa-solid fa-xmark text-lg"></i></button>
-        </div>
-        <div class="p-5 overflow-y-auto custom-scrollbar flex-1 space-y-4">
+        <div class="bg-blue-600 px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between text-white">
           <div>
-            <label class="block text-xs font-bold text-gray-700 mb-1">活動名稱 <span class="text-red-500">*</span></label>
-            <input type="text" v-model="formData.title" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none" placeholder="輸入活動名稱">
+            <h3 class="text-base sm:text-lg font-bold leading-tight">{{ formatFullDate(selectedDate) }}</h3>
+            <p class="text-xs text-blue-100 mt-0.5">當日活動概覽 (共 {{ dayViewEvents.length }} 項)</p>
           </div>
-          <div class="grid grid-cols-2 gap-4">
+          <button @click="activeDayModal = false" class="p-1.5 hover:bg-white/20 rounded-lg transition-colors duration-150">
+            <i class="fa-solid fa-xmark text-lg"></i>
+          </button>
+        </div>
+
+        <div class="p-4 sm:p-6 overflow-y-auto custom-scrollbar flex-1 space-y-2.5">
+          <div v-if="dayViewEvents.length === 0" class="text-center py-8 text-gray-400">
+            <i class="fa-regular fa-calendar-check text-3xl mb-2 text-gray-300"></i>
+            <p class="text-xs sm:text-sm font-medium">本日尚未排定任何活動</p>
+          </div>
+
+          <div v-else class="space-y-2">
+            <div v-for="evt in dayViewEvents" :key="evt.id"
+                 @click="viewEventDetailsFromDayModal(evt)"
+                 class="p-3 bg-gray-50 hover:bg-blue-50/50 active:bg-blue-100/50 border border-gray-200 rounded-lg shadow-2xs transition-colors duration-150 cursor-pointer flex items-center justify-between space-x-2.5">
+              <div class="flex items-center space-x-2.5 min-w-0 flex-1">
+                <div class="w-2.5 h-10 rounded-full flex-shrink-0" :style="{ backgroundColor: getCategoryColor(evt.categoryId) }"></div>
+                <div class="flex-1 min-w-0">
+                  <div class="flex items-center justify-between">
+                    <h4 class="text-xs sm:text-sm font-bold text-gray-800 truncate">{{ evt.title }}</h4>
+                    <span class="text-[10px] px-1.5 py-0.5 rounded font-medium flex-shrink-0 ml-1" :style="{ backgroundColor: getCategoryBg(evt.categoryId), color: getCategoryTextColor(evt.categoryId) }">
+                      {{ getCategoryName(evt.categoryId) }}
+                    </span>
+                  </div>
+                  <div class="flex items-center space-x-2 text-[11px] text-gray-500 mt-1">
+                    <span v-if="evt.time"><i class="fa-regular fa-clock mr-1"></i>{{ evt.time }}</span>
+                    <span><i class="fa-solid fa-building-user mr-1"></i>{{ evt.department }}</span>
+                  </div>
+                </div>
+              </div>
+              <!-- Quick Action Icons -->
+              <div class="flex items-center space-x-1 flex-shrink-0" @click.stop>
+                <button @click.stop="openEditModal(evt); activeDayModal = false;" class="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-100 rounded transition-colors duration-150" title="編輯">
+                  <i class="fa-solid fa-pen-to-square text-xs"></i>
+                </button>
+                <button @click.stop="confirmDeleteEvent(evt)" class="p-1.5 text-red-500 hover:text-red-700 hover:bg-red-100 rounded transition-colors duration-150" title="刪除">
+                  <i class="fa-solid fa-trash-can text-xs"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-gray-50 px-4 sm:px-6 py-3 border-t border-gray-100 flex items-center justify-between pb-safe">
+          <button @click="openAddModal(selectedDateStr); activeDayModal = false;" class="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold transition-colors duration-150 flex items-center space-x-1">
+            <i class="fa-solid fa-plus text-xs"></i>
+            <span>新增活動</span>
+          </button>
+          <div class="flex space-x-2">
+            <button @click="switchView('day'); activeDayModal = false;" class="px-3 py-2 border border-gray-300 hover:bg-gray-200 text-gray-700 rounded-lg text-xs font-medium transition-colors duration-150">
+              日檢視
+            </button>
+            <button @click="activeDayModal = false" class="px-3.5 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-lg text-xs font-medium transition-colors duration-150">
+              關閉
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- EVENT DETAIL MODAL -->
+    <div v-if="activeDetailModal" class="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-gray-900/50">
+      <div class="bg-white rounded-t-2xl sm:rounded-xl shadow-2xl w-full max-w-lg overflow-hidden border border-gray-100 animate-slide-up sm:animate-none">
+        
+        <div class="w-12 h-1 bg-gray-300 rounded-full mx-auto my-2 sm:hidden"></div>
+
+        <div class="px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between text-white" :style="{ backgroundColor: getCategoryColor(selectedEvent.categoryId) }">
+          <span class="text-xs font-bold uppercase tracking-wider bg-black/20 px-2.5 py-1 rounded-full">
+            {{ getCategoryName(selectedEvent.categoryId) }}
+          </span>
+          <div class="flex items-center space-x-1">
+            <button @click="openEditModal(selectedEvent)" class="p-2 hover:bg-black/20 rounded-lg transition-colors duration-150" title="編輯">
+              <i class="fa-solid fa-pen-to-square"></i>
+            </button>
+            <button @click="confirmDeleteEvent(selectedEvent)" class="p-2 hover:bg-black/20 hover:text-red-200 rounded-lg transition-colors duration-150" title="刪除">
+              <i class="fa-solid fa-trash-can"></i>
+            </button>
+            <button @click="activeDetailModal = false" class="p-2 hover:bg-black/20 rounded-lg transition-colors duration-150" title="關閉">
+              <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
+          </div>
+        </div>
+
+        <div class="p-4 sm:p-6 space-y-3.5">
+          <h3 class="text-base sm:text-xl font-bold text-gray-900 leading-snug">{{ selectedEvent.title }}</h3>
+
+          <div class="space-y-2 text-xs sm:text-sm text-gray-600">
+            <div class="flex items-center space-x-2.5">
+              <i class="fa-regular fa-calendar text-blue-600 w-4 text-center"></i>
+              <span class="font-medium text-gray-800">{{ selectedEvent.startDate }} <template v-if="selectedEvent.endDate && selectedEvent.endDate !== selectedEvent.startDate"> 至 {{ selectedEvent.endDate }}</template></span>
+            </div>
+            
+            <div v-if="selectedEvent.time" class="flex items-center space-x-2.5">
+              <i class="fa-regular fa-clock text-blue-600 w-4 text-center"></i>
+              <span>{{ selectedEvent.time }}</span>
+            </div>
+
+            <div class="flex items-center space-x-2.5">
+              <i class="fa-solid fa-building-user text-blue-600 w-4 text-center"></i>
+              <span>承辦單位：<strong>{{ selectedEvent.department }}</strong></span>
+            </div>
+
+            <div v-if="selectedEvent.location" class="flex items-center space-x-2.5">
+              <i class="fa-solid fa-location-dot text-blue-600 w-4 text-center"></i>
+              <span>地點：{{ selectedEvent.location }}</span>
+            </div>
+          </div>
+
+          <div v-if="selectedEvent.description" class="pt-2 border-t border-gray-100">
+            <h4 class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">詳細說明</h4>
+            <div class="bg-gray-50 p-2.5 rounded-lg text-xs sm:text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
+              {{ selectedEvent.description }}
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-gray-50 px-4 sm:px-6 py-3 border-t border-gray-100 flex items-center justify-between pb-safe">
+          <button @click="confirmDeleteEvent(selectedEvent)" class="px-3.5 py-2 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 rounded-lg text-xs sm:text-sm font-medium transition-colors duration-150 flex items-center space-x-1.5">
+            <i class="fa-solid fa-trash-can"></i>
+            <span>刪除活動</span>
+          </button>
+          <div class="flex items-center space-x-2">
+            <button @click="openEditModal(selectedEvent)" class="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs sm:text-sm font-medium transition-colors duration-150 flex items-center space-x-1.5 shadow-xs">
+              <i class="fa-solid fa-pen-to-square"></i>
+              <span>編輯行程</span>
+            </button>
+            <button @click="activeDetailModal = false" class="px-3.5 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-lg text-xs sm:text-sm font-medium transition-colors duration-150">
+              關閉
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ADMIN PASSWORD MODAL -->
+    <div v-if="adminPasswordModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/50">
+      <div class="bg-white rounded-xl shadow-2xl w-full max-w-sm overflow-hidden border border-gray-100 p-6 space-y-4 animate-slide-up sm:animate-none">
+        <div class="flex items-center justify-between border-b pb-3">
+          <h3 class="text-base font-bold text-gray-800 flex items-center">
+            <i class="fa-solid fa-lock text-amber-500 mr-2"></i>管理員驗證
+          </h3>
+          <button @click="adminPasswordModal = false" class="text-gray-400 hover:text-gray-600">
+            <i class="fa-solid fa-xmark text-lg"></i>
+          </button>
+        </div>
+        <p class="text-xs text-gray-600">請輸入管理密碼以取得新增、修改與刪除權限：</p>
+        <div>
+          <input type="password" v-model="inputPassword" @keyup.enter="verifyPassword" placeholder="請輸入密碼 (預設: 2140)"
+                 class="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                 :class="passwordError ? 'border-red-500 bg-red-50' : 'border-gray-300'">
+          <p v-if="passwordError" class="text-xs text-red-500 mt-1 font-semibold">{{ passwordError }}</p>
+          <p class="text-[11px] text-gray-400 mt-1">預設密碼：<code class="bg-gray-100 px-1 py-0.5 rounded text-gray-700 font-mono">2140</code></p>
+        </div>
+        <div class="flex justify-end space-x-2 pt-2">
+          <button @click="adminPasswordModal = false" class="px-3.5 py-1.5 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg text-xs font-medium">取消</button>
+          <button @click="verifyPassword" class="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-medium shadow-xs">登入驗證</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ADD / EDIT EVENT FORM MODAL -->
+    <div v-if="activeFormModal" class="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-gray-900/50">
+      <div class="bg-white rounded-t-2xl sm:rounded-xl shadow-2xl w-full max-w-lg overflow-hidden border border-gray-100 flex flex-col max-h-[90vh] animate-slide-up sm:animate-none">
+        
+        <div class="w-12 h-1 bg-gray-300 rounded-full mx-auto my-2 sm:hidden"></div>
+
+        <div class="bg-blue-600 px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between text-white">
+          <h3 class="text-base sm:text-lg font-bold leading-tight">
+            <i class="fa-solid" :class="isEditMode ? 'fa-pen-to-square' : 'fa-calendar-plus'"></i>
+            {{ isEditMode ? '編輯行程活動' : '新增行程活動' }}
+          </h3>
+          <button @click="activeFormModal = false" class="p-1.5 hover:bg-white/20 rounded-lg transition-colors">
+            <i class="fa-solid fa-xmark text-lg"></i>
+          </button>
+        </div>
+
+        <form @submit.prevent="saveEvent" class="p-4 sm:p-6 overflow-y-auto custom-scrollbar flex-1 space-y-4 text-xs sm:text-sm">
+          <div>
+            <label class="block font-bold text-gray-700 mb-1">活動名稱 <span class="text-red-500">*</span></label>
+            <input type="text" v-model="formEvent.title" required placeholder="請輸入活動名稱"
+                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label class="block text-xs font-bold text-gray-700 mb-1">日期 <span class="text-red-500">*</span></label>
-              <input type="date" v-model="formData.date" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+              <label class="block font-bold text-gray-700 mb-1">開始日期 <span class="text-red-500">*</span></label>
+              <input type="date" v-model="formEvent.startDate" required
+                     class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
             </div>
             <div>
-              <label class="block text-xs font-bold text-gray-700 mb-1">時間</label>
-              <input type="time" v-model="formData.time" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+              <label class="block font-bold text-gray-700 mb-1">結束日期</label>
+              <input type="date" v-model="formEvent.endDate"
+                     class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
             </div>
           </div>
-          <div class="grid grid-cols-2 gap-4">
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label class="block text-xs font-bold text-gray-700 mb-1">分類</label>
-              <select v-model="formData.categoryId" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-white">
+              <label class="block font-bold text-gray-700 mb-1">時間說明 (選填)</label>
+              <input type="text" v-model="formEvent.time" placeholder="例如: 08:00 - 12:00"
+                     class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+            </div>
+            <div>
+              <label class="block font-bold text-gray-700 mb-1">承辦單位</label>
+              <select v-model="formEvent.department" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <option v-for="dept in departments" :key="dept" :value="dept">{{ dept }}</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label class="block font-bold text-gray-700 mb-1">活動分類</label>
+              <select v-model="formEvent.categoryId" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
                 <option v-for="cat in categories" :key="cat.id" :value="cat.id">{{ cat.name }}</option>
               </select>
             </div>
             <div>
-              <label class="block text-xs font-bold text-gray-700 mb-1">主辦單位</label>
-              <select v-model="formData.department" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-white">
-                <option v-for="dep in departments" :key="dep" :value="dep">{{ dep }}</option>
-              </select>
+              <label class="block font-bold text-gray-700 mb-1">活動地點 (選填)</label>
+              <input type="text" v-model="formEvent.location" placeholder="例如: 視聽教室 / 操場"
+                     class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
             </div>
           </div>
+
           <div>
-            <label class="block text-xs font-bold text-gray-700 mb-1">詳細說明</label>
-            <textarea v-model="formData.description" rows="4" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none resize-none" placeholder="輸入活動詳細內容..."></textarea>
+            <label class="block font-bold text-gray-700 mb-1">詳細說明 (選填)</label>
+            <textarea v-model="formEvent.description" rows="3" placeholder="請輸入詳細活動注意事項或對象說明"
+                      class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
           </div>
-        </div>
-        <div class="px-5 py-3 bg-gray-50 border-t border-gray-100 flex justify-end space-x-2 shrink-0">
-          <button @click="closeAddModal" class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 rounded-lg transition-colors">取消</button>
-          <button @click="saveEvent" class="px-4 py-2 text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 rounded-lg shadow-sm transition-colors">儲存活動</button>
-        </div>
-      </div>
 
-      <!-- Custom Confirm Dialog -->
-      <div v-if="confirmDialog.show" class="bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden animate-slide-up" @click.stop>
-        <div class="p-6 text-center">
-          <div class="w-14 h-14 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <i class="fa-solid fa-triangle-exclamation text-2xl text-red-600"></i>
+          <div class="pt-3 border-t border-gray-100 flex items-center justify-between pb-safe">
+            <button type="button" @click="activeFormModal = false" class="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg font-medium">
+              取消
+            </button>
+            <button type="submit" class="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold shadow-xs">
+              {{ isEditMode ? '儲存變更' : '確認新增' }}
+            </button>
           </div>
-          <h3 class="text-lg font-bold text-gray-900 mb-2">{{ confirmDialog.title }}</h3>
-          <p class="text-sm text-gray-500">{{ confirmDialog.message }}</p>
-        </div>
-        <div class="px-5 py-3 bg-gray-50 border-t border-gray-100 flex justify-center space-x-3">
-          <button @click="closeConfirm" class="px-5 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 rounded-lg transition-colors w-1/2">取消</button>
-          <button @click="executeConfirm" class="px-5 py-2 text-sm font-medium bg-red-600 text-white hover:bg-red-700 rounded-lg shadow-sm transition-colors w-1/2">確定刪除</button>
-        </div>
+        </form>
       </div>
-
     </div>
+
+    <!-- FIREBASE CONFIG MODAL -->
+    <div v-if="activeFirebaseModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/50">
+      <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden border border-gray-100 p-6 space-y-4 animate-slide-up sm:animate-none">
+        <div class="flex items-center justify-between border-b pb-3">
+          <h3 class="text-base font-bold text-gray-800 flex items-center">
+            <i class="fa-solid fa-cloud text-blue-600 mr-2"></i>Firebase 雲端資料庫金鑰設定
+          </h3>
+          <button @click="activeFirebaseModal = false" class="text-gray-400 hover:text-gray-600">
+            <i class="fa-solid fa-xmark text-lg"></i>
+          </button>
+        </div>
+
+        <p class="text-xs text-gray-600 leading-relaxed">
+          若需將行事曆同步至特定的 Firebase Firestore，可貼上專案設定或手動填寫欄位：
+        </p>
+
+        <div class="space-y-2">
+          <label class="block text-xs font-bold text-gray-700">自動解析 Firebase Config 文字 (選填)</label>
+          <div class="flex space-x-2">
+            <textarea v-model="rawConfigInput" rows="2" placeholder='貼上 firebaseConfig 物件，如 const firebaseConfig = { apiKey: "...", ... }'
+                      class="flex-1 px-2.5 py-1.5 border border-gray-300 rounded-lg text-xs font-mono focus:outline-none focus:ring-1 focus:ring-blue-500"></textarea>
+            <button @click="parseJsonConfig" class="px-3 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-xs font-medium self-end">
+              解析
+            </button>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+          <div>
+            <label class="block font-semibold text-gray-700">apiKey</label>
+            <input type="text" v-model="customFirebaseConfig.apiKey" class="w-full px-2 py-1 border rounded text-xs">
+          </div>
+          <div>
+            <label class="block font-semibold text-gray-700">authDomain</label>
+            <input type="text" v-model="customFirebaseConfig.authDomain" class="w-full px-2 py-1 border rounded text-xs">
+          </div>
+          <div>
+            <label class="block font-semibold text-gray-700">projectId</label>
+            <input type="text" v-model="customFirebaseConfig.projectId" class="w-full px-2 py-1 border rounded text-xs">
+          </div>
+          <div>
+            <label class="block font-semibold text-gray-700">appId</label>
+            <input type="text" v-model="customFirebaseConfig.appId" class="w-full px-2 py-1 border rounded text-xs">
+          </div>
+        </div>
+
+        <div v-if="firebaseModalError" class="p-2 bg-amber-50 text-amber-800 rounded text-xs font-medium">
+          {{ firebaseModalError }}
+        </div>
+
+        <div class="flex items-center justify-between pt-2 border-t border-gray-100">
+          <button @click="clearFirebaseConfig" class="text-xs text-red-600 hover:underline">
+            清除設定 (還原預設)
+          </button>
+          <div class="flex space-x-2">
+            <button @click="activeFirebaseModal = false" class="px-3 py-1.5 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg text-xs font-medium">
+              取消
+            </button>
+            <button @click="saveFirebaseConfig" class="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold shadow-xs">
+              儲存並連接
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
   </div>
 
-  <script>
-    const { createApp, ref, computed, watch, onMounted } = Vue;
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { getFirestore, doc, collection, onSnapshot, setDoc, deleteDoc, writeBatch } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-    // Helper functions
-    const formatDateStr = (date) => {
-      const y = date.getFullYear();
-      const m = String(date.getMonth() + 1).padStart(2, '0');
-      const d = String(date.getDate()).padStart(2, '0');
-      return `${y}-${m}-${d}`;
+    const { createApp, ref, computed, onMounted } = Vue;
+
+    // Default Firebase Config for tuku-es-calendar
+    const DEFAULT_FIREBASE_CONFIG = {
+      apiKey: "AIzaSyDRNURwHBCvq-M7R1h4l8hzkqLB8ca7IOI",
+      authDomain: "tuku-es-calendar.firebaseapp.com",
+      projectId: "tuku-es-calendar",
+      storageBucket: "tuku-es-calendar.firebasestorage.app",
+      messagingSenderId: "701380711220",
+      appId: "1:701380711220:web:9d0a86152893cdd0e70b61"
     };
-    
-    const formatFullDate = (date) => {
-      const days = ['日', '一', '二', '三', '四', '五', '六'];
-      return `${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日 (星期${days[date.getDay()]})`;
-    };
 
-    const categories = [
-      { id: 'academic', name: '教務', color: '#3b82f6', bg: '#eff6ff', text: '#1d4ed8' },
-      { id: 'student', name: '學務', color: '#10b981', bg: '#ecfdf5', text: '#047857' },
-      { id: 'general', name: '總務', color: '#f59e0b', bg: '#fffbeb', text: '#b45309' },
-      { id: 'counseling', name: '輔導', color: '#8b5cf6', bg: '#f5f3ff', text: '#6d28d9' },
-      { id: 'holiday', name: '放假', color: '#ef4444', bg: '#fef2f2', text: '#b91c1c' },
-      { id: 'other', name: '其他', color: '#6b7280', bg: '#f9fafb', text: '#374151' }
-    ];
-
-    const departments = ['教務處', '學務處', '總務處', '輔導室', '人事室', '校長室', '其他'];
-
-    // Default mock data (used if no local storage data exists)
-    const initialEvents = [
-      { id: 1, title: '開學日', date: '2026-08-30', categoryId: 'academic', department: '教務處', time: '08:00', description: '115學年度上學期開學日，全校師生返校。' },
-      { id: 2, title: '教師節慶祝大會', date: '2026-09-28', categoryId: 'student', department: '學務處', time: '10:00', description: '表揚資深優良教師。' },
-      { id: 3, title: '第一次期中考', date: '2026-11-03', categoryId: 'academic', department: '教務處', time: '', description: '全校統一舉行第一次期中考。' },
-      { id: 4, title: '第一次期中考', date: '2026-11-04', categoryId: 'academic', department: '教務處', time: '', description: '全校統一舉行第一次期中考。' },
-      { id: 5, title: '校慶運動會', date: '2026-12-12', categoryId: 'student', department: '學務處', time: '08:30', description: '土庫國小創校紀念日暨全校運動會。' }
-    ];
-
-    const STORAGE_KEY = 'tuku_calendar_events';
-
-    const app = createApp({
+    createApp({
       setup() {
-        const currentDate = ref(new Date(2026, 8, 14)); // Start at Sept 2026 as per original spec
-        const selectedDate = ref(new Date(2026, 8, 14));
         const currentView = ref('month');
-        const events = ref([]);
-
-        // Load from LocalStorage
-        const loadEvents = () => {
-          const stored = localStorage.getItem(STORAGE_KEY);
-          if (stored) {
-            try {
-              events.value = JSON.parse(stored);
-            } catch (e) {
-              events.value = [...initialEvents];
-            }
-          } else {
-            events.value = [...initialEvents];
-          }
-        };
-
-        onMounted(() => {
-          loadEvents();
-        });
-
-        // Watch and save to LocalStorage automatically when changed
-        watch(events, (newEvents) => {
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(newEvents));
-        }, { deep: true });
-        
-        // Search & Filter
+        const currentDate = ref(new Date()); 
+        const selectedDate = ref(new Date());
+        const sidebarOpen = ref(false);
         const searchQuery = ref('');
-        const filteredEvents = computed(() => {
-          if (!searchQuery.value.trim()) return events.value;
-          const q = searchQuery.value.toLowerCase();
-          return events.value.filter(e => 
-            e.title.toLowerCase().includes(q) || 
-            (e.description && e.description.toLowerCase().includes(q))
-          );
-        });
 
-        // Month View Logic
-        const monthViewDays = computed(() => {
-          const year = currentDate.value.getFullYear();
-          const month = currentDate.value.getMonth();
-          
-          const firstDayOfMonth = new Date(year, month, 1);
-          const startingDayOfWeek = firstDayOfMonth.getDay(); 
-          
-          const daysInMonth = new Date(year, month + 1, 0).getDate();
-          const daysInPrevMonth = new Date(year, month, 0).getDate();
-          
-          const days = [];
-          const todayStr = formatDateStr(new Date());
+        const agendaFilterMode = ref('twoWeeks');
 
-          // Previous month padding
-          for (let i = startingDayOfWeek - 1; i >= 0; i--) {
-            const date = new Date(year, month - 1, daysInPrevMonth - i);
-            const dateStr = formatDateStr(date);
-            days.push({
-              date, dateStr, dayNum: date.getDate(), isCurrentMonth: false, isToday: dateStr === todayStr,
-              events: getEventsForDate(dateStr)
-            });
+        const syncStatus = ref('syncing'); 
+        const currentUserId = ref('');
+        let db = null;
+        let auth = null;
+        let eventsColRef = null;
+
+        const activeDetailModal = ref(false);
+        const activeFormModal = ref(false);
+        const activeDayModal = ref(false);
+        const activeFirebaseModal = ref(false);
+        const firebaseModalError = ref('');
+        const rawConfigInput = ref('');
+        const customFirebaseConfig = ref({ ...DEFAULT_FIREBASE_CONFIG });
+
+        const isEditMode = ref(false);
+        const selectedEvent = ref({});
+
+        const LOCAL_STORAGE_KEY = 'tuku_school_calendar_events_v1';
+        const FIREBASE_CONFIG_KEY = 'tuku_firebase_custom_config_v1';
+
+        const isAdmin = ref(false);
+        const adminPasswordModal = ref(false);
+        const inputPassword = ref('');
+        const passwordError = ref('');
+        let pendingAdminAction = null;
+
+        const loadLocalEvents = () => {
+          try {
+            const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
+            if (saved) {
+              const parsed = JSON.parse(saved);
+              if (Array.isArray(parsed) && parsed.length > 0) {
+                return parsed;
+              }
+            }
+          } catch (e) {
+            console.warn("LocalStorage error:", e);
           }
-
-          // Current month days
-          for (let i = 1; i <= daysInMonth; i++) {
-            const date = new Date(year, month, i);
-            const dateStr = formatDateStr(date);
-            days.push({
-              date, dateStr, dayNum: i, isCurrentMonth: true, isToday: dateStr === todayStr,
-              events: getEventsForDate(dateStr)
-            });
-          }
-
-          // Next month padding to complete 6 weeks (42 days)
-          const remainingDays = 42 - days.length;
-          for (let i = 1; i <= remainingDays; i++) {
-            const date = new Date(year, month + 1, i);
-            const dateStr = formatDateStr(date);
-            days.push({
-              date, dateStr, dayNum: i, isCurrentMonth: false, isToday: dateStr === todayStr,
-              events: getEventsForDate(dateStr)
-            });
-          }
-
-          return days;
-        });
-
-        // Week View Logic
-        const weekViewDays = computed(() => {
-          const date = new Date(currentDate.value);
-          const day = date.getDay();
-          const diff = date.getDate() - day; // Adjust to Sunday
-          const sunday = new Date(date.setDate(diff));
-          
-          const days = [];
-          const todayStr = formatDateStr(new Date());
-          const weekDayNames = ['日', '一', '二', '三', '四', '五', '六'];
-
-          for (let i = 0; i < 7; i++) {
-            const curDate = new Date(sunday);
-            curDate.setDate(sunday.getDate() + i);
-            const dateStr = formatDateStr(curDate);
-            days.push({
-              date: curDate, dateStr, dayNum: curDate.getDate(), weekDayName: weekDayNames[i], isToday: dateStr === todayStr,
-              events: getEventsForDate(dateStr)
-            });
-          }
-          return days;
-        });
-
-        // Day View Logic
-        const dayViewEvents = computed(() => {
-          return getEventsForDate(formatDateStr(selectedDate.value));
-        });
-
-        // Agenda View Logic
-        const agendaEvents = computed(() => {
-          const todayStr = formatDateStr(new Date());
-          return filteredEvents.value
-            .filter(e => e.date >= todayStr)
-            .sort((a, b) => new Date(a.date) - new Date(b.date));
-        });
-
-        const groupedAgendaEvents = computed(() => {
-          const groups = {};
-          agendaEvents.value.forEach(evt => {
-            if (!groups[evt.date]) groups[evt.date] = [];
-            groups[evt.date].push(evt);
-          });
-          return groups;
-        });
-
-        const getEventsForDate = (dateStr) => {
-          return filteredEvents.value.filter(e => e.date === dateStr).sort((a, b) => (a.time || '24:00').localeCompare(b.time || '24:00'));
+          return null;
         };
 
-        const currentPeriodTitle = computed(() => {
-          const y = currentDate.value.getFullYear();
-          const m = currentDate.value.getMonth() + 1;
-          if (currentView.value === 'month' || currentView.value === 'agenda') {
-            return `${y}年 ${m}月`;
-          } else if (currentView.value === 'week') {
-            const firstDay = weekViewDays.value[0].date;
-            const lastDay = weekViewDays.value[6].date;
-            if (firstDay.getMonth() === lastDay.getMonth()) {
-              return `${y}年 ${m}月`;
-            } else {
-              return `${firstDay.getMonth()+1}月 - ${lastDay.getMonth()+1}月`;
+        const saveLocalEvents = (data) => {
+          try {
+            localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(data));
+          } catch (e) {
+            console.warn("LocalStorage save skipped:", e);
+          }
+        };
+
+        const requireAdmin = (actionCallback) => {
+          if (isAdmin.value) {
+            actionCallback();
+          } else {
+            pendingAdminAction = actionCallback;
+            inputPassword.value = '';
+            passwordError.value = '';
+            adminPasswordModal.value = true;
+          }
+        };
+
+        const verifyPassword = () => {
+          if (inputPassword.value === '2140') {
+            isAdmin.value = true;
+            adminPasswordModal.value = false;
+            passwordError.value = '';
+            if (pendingAdminAction) {
+              const callback = pendingAdminAction;
+              pendingAdminAction = null;
+              callback();
             }
           } else {
-            return `${y}年 ${m}月`;
-          }
-        });
-
-        // Navigation
-        const navigatePrev = () => {
-          const d = new Date(currentDate.value);
-          if (currentView.value === 'month') d.setMonth(d.getMonth() - 1);
-          else if (currentView.value === 'week') d.setDate(d.getDate() - 7);
-          else if (currentView.value === 'day') { d.setDate(d.getDate() - 1); selectedDate.value = new Date(d); }
-          currentDate.value = d;
-        };
-        const navigateNext = () => {
-          const d = new Date(currentDate.value);
-          if (currentView.value === 'month') d.setMonth(d.getMonth() + 1);
-          else if (currentView.value === 'week') d.setDate(d.getDate() + 7);
-          else if (currentView.value === 'day') { d.setDate(d.getDate() + 1); selectedDate.value = new Date(d); }
-          currentDate.value = d;
-        };
-        const goToToday = () => {
-          currentDate.value = new Date();
-          selectedDate.value = new Date();
-        };
-
-        const handleDayClick = (date) => {
-          selectedDate.value = date;
-          currentDate.value = date;
-          
-          if (isAdmin.value) {
-            // Admin: Clicking ANY day cell opens the Add Event modal immediately for that date.
-            openAddModal(formatDateStr(date));
-          } else if (window.innerWidth < 640) {
-            // General user mobile behavior: switch to day view to see details clearly
-            currentView.value = 'day'; 
+            passwordError.value = '密碼錯誤！請重新輸入';
           }
         };
-
-        // Category Helpers
-        const getCategoryObj = (id) => categories.find(c => c.id === id) || categories[5];
-        const getCategoryColor = (id) => getCategoryObj(id).color;
-        const getCategoryBg = (id) => getCategoryObj(id).bg;
-        const getCategoryTextColor = (id) => getCategoryObj(id).text;
-        const getCategoryName = (id) => getCategoryObj(id).name;
-
-        // UI State
-        const toast = ref({ show: false, message: '', type: 'success' });
-        const showToast = (message, type = 'success') => {
-          toast.value = { show: true, message, type };
-          setTimeout(() => toast.value.show = false, 3000);
-        };
-
-        // Custom Confirm Dialog State (No alert/confirm)
-        const confirmDialog = ref({ show: false, title: '', message: '', onConfirm: null });
-        const showConfirm = (title, message, onConfirmCallback) => {
-          confirmDialog.value = { show: true, title, message, onConfirm: onConfirmCallback };
-        };
-        const closeConfirm = () => { confirmDialog.value.show = false; };
-        const executeConfirm = () => {
-          if(typeof confirmDialog.value.onConfirm === 'function') {
-            confirmDialog.value.onConfirm();
-          }
-          closeConfirm();
-        };
-
-        // Admin Auth
-        const isAdmin = ref(false);
-        const showAdminAuthModal = ref(false);
-        const adminPassword = ref('');
-        const authError = ref(false);
 
         const toggleAdminAuth = () => {
           if (isAdmin.value) {
             isAdmin.value = false;
-            showToast('已登出管理員身分', 'warning');
           } else {
-            showAdminAuthModal.value = true;
-            adminPassword.value = '';
-            authError.value = false;
+            requireAdmin(() => {});
           }
         };
 
-        const loginAdmin = () => {
-          // Verify with 'admin' without exposing any hint on UI
-          if (adminPassword.value === 'admin') {
-            isAdmin.value = true;
-            showAdminAuthModal.value = false;
-            showToast('管理員登入成功', 'success');
-          } else {
-            authError.value = true;
+        const defaultEvents = [
+          { id: '101', title: '全校備課日與教職員會議', startDate: '2026-08-25', endDate: '2026-08-25', time: '08:30 - 16:00', department: '教導處', categoryId: 'admin', description: '全校教職員備課、環境整備與學期工作會議' },
+          { id: '102', title: '115學年度第一學期開學日', startDate: '2026-08-31', endDate: '2026-08-31', time: '07:30', department: '全校', categoryId: 'admin', description: '始業式、正式上課與發放教科書' },
+          { id: '201', title: '社團選社與開課', startDate: '2026-09-04', endDate: '2026-09-04', department: '訓導組', categoryId: 'regular', description: '課後社團報名與第一次社團活動' },
+          { id: '202', title: '國家防災日全校避難演練', startDate: '2026-09-18', endDate: '2026-09-18', time: '09:21', department: '訓導組', categoryId: 'event', description: '配合全國防災日進行地震避難與疏散演練' },
+          { id: '203', title: '教師節感恩慶祝活動', startDate: '2026-09-28', endDate: '2026-09-28', department: '輔導室', categoryId: 'event', description: '學生敬師感恩奉茶活動' },
+          { id: '301', title: '國慶日放假', startDate: '2026-10-10', endDate: '2026-10-10', department: '全校', categoryId: 'holiday', description: '國慶日放假一天' },
+          { id: '302', title: '語文競賽校內初賽', startDate: '2026-10-21', endDate: '2026-10-21', department: '教務組', categoryId: 'contest', description: '朗讀、演講、字音字形與作文競賽' },
+          { id: '401', title: '期中學業評量（國、自、英）', startDate: '2026-11-04', endDate: '2026-11-04', department: '教務組', categoryId: 'exam', description: '第一天期中考' },
+          { id: '402', title: '期中學業評量（數、社）', startDate: '2026-11-05', endDate: '2026-11-05', department: '教務組', categoryId: 'exam', description: '第二天期中考' },
+          { id: '403', title: '校慶運動會預演', startDate: '2026-11-10', endDate: '2026-11-10', department: '訓導組', categoryId: 'event', description: '進場與各項競賽流程預演' },
+          { id: '404', title: '土庫國小校慶社區運動會', startDate: '2026-11-12', endDate: '2026-11-12', time: '08:00 - 15:30', department: '全校', categoryId: 'event', description: '全校運動會、大會操表演與社區趣味競賽' },
+          { id: '501', title: '英語歌唱比賽暨耶誕聯歡', startDate: '2026-12-25', endDate: '2026-12-25', department: '教務組', categoryId: 'event', description: '全校各班英語歌唱成果發表與耶誕感恩活動' },
+          { id: '601', title: '元旦放假', startDate: '2027-01-01', endDate: '2027-01-01', department: '全校', categoryId: 'holiday', description: '開元紀念日/元旦放假一天' },
+          { id: '602', title: '學習扶助課程結束', startDate: '2027-01-08', endDate: '2027-01-08', department: '教務組', categoryId: 'admin', description: '本學期學習扶助課程結束' },
+          { id: '603', title: '期末學業評量（國、自、英）', startDate: '2027-01-13', endDate: '2027-01-13', department: '教務組', categoryId: 'exam', description: '第一天期末考。全校 12:40 統一放學；13:30-16:00 期末校務會議' },
+          { id: '604', title: '期末學業評量（數、社）', startDate: '2027-01-14', endDate: '2027-01-14', department: '教務組', categoryId: 'exam', description: '第二天期末考。發下露營行程通知單；公告參與露營學生名單' },
+          { id: '605', title: '期末英語大神考試與茶會抽獎', startDate: '2027-01-15', endDate: '2027-01-15', time: '09:00 - 13:20', department: '教務組', categoryId: 'event', description: '第二節期末英語大神考試；午休與大熊有約茶會暨書展抽獎與酷英抽獎' },
+          { id: '606', title: '休業式典禮暨慶生會', startDate: '2027-01-19', endDate: '2027-01-19', time: '08:00 - 15:00', department: '全校', categoryId: 'event', description: '08:00大掃除；09:30休業式典禮暨慶生會；13:30露營前訓課程；發成績單' },
+          { id: '607', title: '全校戶外教育見學', startDate: '2027-01-20', endDate: '2027-01-20', location: '華山/二尖山', department: '全校', categoryId: 'event', description: '1-3年級：華山土石流園區；4-6年級：二尖山' },
+          { id: '608', title: '寒假開始', startDate: '2027-01-21', endDate: '2027-01-21', department: '全校', categoryId: 'holiday', description: '115學年度第一學期寒假開始' },
+          { id: '609', title: '戶外教育露營課程', startDate: '2027-01-26', endDate: '2027-01-27', department: '全校', categoryId: 'event', description: '1/25 行李檢查；1/26-1/27 戶外教育露營' },
+          { id: '610', title: '農曆春節連假', startDate: '2027-02-04', endDate: '2027-02-10', department: '全校', categoryId: 'holiday', description: '春節連續假期' },
+          { id: '611', title: '下學期開學日', startDate: '2027-02-11', endDate: '2027-02-11', department: '全校', categoryId: 'admin', description: '115 學年度第二學期開學日（正式上課）' }
+        ];
+
+        const seedInitialData = async () => {
+          if (!eventsColRef || !db) return;
+          try {
+            const batch = writeBatch(db);
+            defaultEvents.forEach(evt => {
+              const docRef = doc(eventsColRef, evt.id);
+              batch.set(docRef, evt);
+            });
+            await batch.commit();
+          } catch (err) {
+            console.error("Error seeding initial data:", err);
           }
         };
 
-        // Modals Logic
-        const showEventModal = ref(false);
-        const selectedEvent = ref(null);
-        
-        const viewEventDetails = (evt) => {
-          selectedEvent.value = evt;
-          showEventModal.value = true;
-        };
-        
-        const closeEventModal = () => {
-          showEventModal.value = false;
-          setTimeout(() => selectedEvent.value = null, 200);
-        };
+        const savedEvents = loadLocalEvents();
+        const events = ref(savedEvents || [...defaultEvents]);
 
-        const showAddModal = ref(false);
-        const editingEvent = ref(null);
-        const formData = ref({ title: '', date: '', time: '', categoryId: 'academic', department: '教務處', description: '' });
+        onMounted(async () => {
+          await initFirebaseConnection();
+        });
 
-        const openAddModal = (dateStr = null) => {
-          if (!isAdmin.value) {
-            showToast('請先登入管理員', 'error');
-            return;
-          }
-          editingEvent.value = null;
-          formData.value = { 
-            title: '', 
-            date: dateStr || formatDateStr(selectedDate.value), 
-            time: '', 
-            categoryId: 'academic', 
-            department: '教務處', 
-            description: '' 
-          };
-          showAddModal.value = true;
-        };
-
-        const openEditModal = (evt) => {
-          closeEventModal();
-          editingEvent.value = evt;
-          formData.value = { ...evt };
-          showAddModal.value = true;
-        };
-
-        const closeAddModal = () => {
-          showAddModal.value = false;
-        };
-
-        const saveEvent = () => {
-          if (!formData.value.title || !formData.value.date) {
-            showToast('請填寫必填欄位', 'error');
-            return;
-          }
-          
-          if (editingEvent.value) {
-            const idx = events.value.findIndex(e => e.id === editingEvent.value.id);
-            if (idx !== -1) {
-              events.value[idx] = { ...formData.value, id: editingEvent.value.id };
+        const initFirebaseConnection = async () => {
+          try {
+            const appId = typeof __app_id !== 'undefined' ? __app_id : 'tuku-calendar-app';
+            
+            let firebaseConfig = null;
+            const userSavedConfig = localStorage.getItem(FIREBASE_CONFIG_KEY);
+            
+            if (userSavedConfig) {
+              try {
+                firebaseConfig = JSON.parse(userSavedConfig);
+                customFirebaseConfig.value = { ...customFirebaseConfig.value, ...firebaseConfig };
+              } catch (e) {
+                console.warn("Invalid saved firebase config:", e);
+              }
             }
-            showToast('活動已更新', 'success');
-          } else {
-            events.value.push({ ...formData.value, id: Date.now() }); // Generates unique ID
-            showToast('活動已新增', 'success');
+
+            if (!firebaseConfig && typeof __firebase_config !== 'undefined' && __firebase_config) {
+              try {
+                firebaseConfig = JSON.parse(__firebase_config);
+              } catch (e) {
+                console.warn("Invalid injected firebase config:", e);
+              }
+            }
+
+            if (!firebaseConfig) {
+              firebaseConfig = DEFAULT_FIREBASE_CONFIG;
+            }
+
+            if (!firebaseConfig || !firebaseConfig.apiKey || !firebaseConfig.projectId) {
+              syncStatus.value = 'offline';
+              return;
+            }
+
+            syncStatus.value = 'syncing';
+            const app = initializeApp(firebaseConfig, 'dynamicApp_' + Date.now());
+            auth = getAuth(app);
+            db = getFirestore(app);
+
+            let userCredential = null;
+            try {
+              if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                userCredential = await signInWithCustomToken(auth, __initial_auth_token);
+              } else if (!auth.currentUser) {
+                userCredential = await signInAnonymously(auth);
+              }
+            } catch (authErr) {
+              console.warn("Auth initial check:", authErr);
+            }
+
+            const user = auth.currentUser || (userCredential ? userCredential.user : null);
+            if (user) {
+              currentUserId.value = user.uid;
+            }
+
+            eventsColRef = collection(db, 'artifacts', appId, 'public', 'data', 'events');
+
+            onSnapshot(eventsColRef, async (snapshot) => {
+              syncStatus.value = 'synced';
+              
+              if (snapshot.empty) {
+                await seedInitialData();
+              } else {
+                const cloudEvents = [];
+                snapshot.forEach(docSnap => {
+                  cloudEvents.push({ id: docSnap.id, ...docSnap.data() });
+                });
+                events.value = cloudEvents;
+                saveLocalEvents(cloudEvents);
+              }
+            }, (err) => {
+              console.warn("Firestore sync error:", err);
+              syncStatus.value = 'error';
+              firebaseModalError.value = 'Firestore 權限不足，已備援使用本機紀錄。';
+            });
+
+          } catch (err) {
+            console.warn("Cloud sync fallback:", err);
+            syncStatus.value = 'offline';
+            eventsColRef = null;
           }
-          closeAddModal();
         };
 
-        const requestDeleteEvent = (id) => {
-          // Use custom confirm dialog to ensure NO native confirm() is used
-          showConfirm('刪除活動', '您確定要刪除這項活動嗎？此動作無法復原。', () => {
-            // Filter out the deleted ID to trigger reactivity
-            events.value = events.value.filter(e => e.id !== id);
-            closeEventModal();
-            showToast('活動已刪除', 'success');
+        const openFirebaseModal = () => {
+          firebaseModalError.value = '';
+          rawConfigInput.value = '';
+          const saved = localStorage.getItem(FIREBASE_CONFIG_KEY);
+          if (saved) {
+            try {
+              customFirebaseConfig.value = JSON.parse(saved);
+            } catch (e) {}
+          } else {
+            customFirebaseConfig.value = { ...DEFAULT_FIREBASE_CONFIG };
+          }
+          activeFirebaseModal.value = true;
+        };
+
+        const parseJsonConfig = () => {
+          try {
+            const text = rawConfigInput.value;
+            const apiKeyMatch = text.match(/apiKey:\s*["']([^"']+)["']/);
+            const authDomainMatch = text.match(/authDomain:\s*["']([^"']+)["']/);
+            const projectIdMatch = text.match(/projectId:\s*["']([^"']+)["']/);
+            const appIdMatch = text.match(/appId:\s*["']([^"']+)["']/);
+
+            if (apiKeyMatch) customFirebaseConfig.value.apiKey = apiKeyMatch[1];
+            if (authDomainMatch) customFirebaseConfig.value.authDomain = authDomainMatch[1];
+            if (projectIdMatch) customFirebaseConfig.value.projectId = projectIdMatch[1];
+            if (appIdMatch) customFirebaseConfig.value.appId = appIdMatch[1];
+
+            if (!apiKeyMatch && text.trim().startsWith('{')) {
+              const parsed = JSON.parse(text);
+              if (parsed.apiKey) customFirebaseConfig.value.apiKey = parsed.apiKey;
+              if (parsed.authDomain) customFirebaseConfig.value.authDomain = parsed.authDomain;
+              if (parsed.projectId) customFirebaseConfig.value.projectId = parsed.projectId;
+              if (parsed.appId) customFirebaseConfig.value.appId = parsed.appId;
+            }
+
+            firebaseModalError.value = '解析成功！請點擊「儲存設定」。';
+          } catch (e) {
+            firebaseModalError.value = '無法自動解析，請手動輸入關鍵欄位。';
+          }
+        };
+
+        const saveFirebaseConfig = async () => {
+          const cfg = customFirebaseConfig.value;
+          if (!cfg.apiKey || !cfg.projectId || !cfg.authDomain) {
+            firebaseModalError.value = '請至少填寫 apiKey, authDomain 與 projectId 欄位！';
+            return;
+          }
+          try {
+            localStorage.setItem(FIREBASE_CONFIG_KEY, JSON.stringify(cfg));
+            activeFirebaseModal.value = false;
+            await initFirebaseConnection();
+          } catch (e) {
+            firebaseModalError.value = '儲存失敗：' + e.message;
+          }
+        };
+
+        const clearFirebaseConfig = async () => {
+          localStorage.removeItem(FIREBASE_CONFIG_KEY);
+          customFirebaseConfig.value = { apiKey: '', authDomain: '', projectId: '', storageBucket: '', messagingSenderId: '', appId: '' };
+          activeFirebaseModal.value = false;
+          syncStatus.value = 'offline';
+          eventsColRef = null;
+        };
+
+        const resetToDefaultData = async () => {
+          requireAdmin(async () => {
+            if (confirm('確定要將行事曆恢復為預設學期行程嗎？')) {
+              events.value = [...defaultEvents];
+              saveLocalEvents(defaultEvents);
+              if (eventsColRef) {
+                await seedInitialData();
+              }
+            }
           });
         };
 
+        const pushHistoryState = (type) => {
+          try {
+            history.pushState({ modalType: type }, '');
+          } catch (e) {
+            console.error(e);
+          }
+        };
+
+        const switchView = (viewName) => {
+          if (currentView.value !== viewName) {
+            pushHistoryState('view_' + viewName);
+            currentView.value = viewName;
+          }
+        };
+
+        const toggleSidebarMobile = () => {
+          sidebarOpen.value = !sidebarOpen.value;
+          if (sidebarOpen.value) {
+            pushHistoryState('sidebar');
+          }
+        };
+
+        window.addEventListener('popstate', () => {
+          if (activeDetailModal.value) activeDetailModal.value = false;
+          else if (activeDayModal.value) activeDayModal.value = false;
+          else if (activeFormModal.value) activeFormModal.value = false;
+          else if (adminPasswordModal.value) adminPasswordModal.value = false;
+          else if (activeFirebaseModal.value) activeFirebaseModal.value = false;
+          else if (sidebarOpen.value) sidebarOpen.value = false;
+          else if (currentView.value !== 'month') currentView.value = 'month';
+        });
+
+        const onSearchInput = () => {
+          if (searchQuery.value.trim() !== '' && currentView.value !== 'agenda') {
+            switchView('agenda');
+          }
+        };
+
+        const clearSearch = () => {
+          searchQuery.value = '';
+        };
+
+        const jumpToEventDate = (evt) => {
+          const parts = evt.startDate.split('-');
+          if (parts.length === 3) {
+            const targetDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+            currentDate.value = targetDate;
+            selectedDate.value = targetDate;
+          }
+          viewEventDetails(evt);
+        };
+
+        const jumpToDateAndDetail = (dateStr) => {
+          const parts = dateStr.split('-');
+          if (parts.length === 3) {
+            const targetDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+            currentDate.value = targetDate;
+            selectedDate.value = targetDate;
+            switchView('day');
+          }
+        };
+
+        const formEvent = ref({
+          id: '',
+          title: '',
+          startDate: '',
+          endDate: '',
+          time: '',
+          department: '教導處',
+          categoryId: 'exam',
+          location: '',
+          description: ''
+        });
+
+        const departments = ['教導處', '教務組', '訓導組', '輔導室', '總務處', '全校'];
+        const selectedDepartments = ref([...departments]);
+
+        const categories = ref([
+          { id: 'exam', name: '學業評量', color: '#ef4444', bgColor: '#fee2e2', textColor: '#991b1b' },
+          { id: 'event', name: '重大活動', color: '#8b5cf6', bgColor: '#f3e8ff', textColor: '#5b21b6' },
+          { id: 'contest', name: '競賽發表', color: '#f59e0b', bgColor: '#fef3c7', textColor: '#92400e' },
+          { id: 'regular', name: '常態講座', color: '#10b981', bgColor: '#d1fae5', textColor: '#065f46' },
+          { id: 'admin', name: '行政會議', color: '#3b82f6', bgColor: '#dbeafe', textColor: '#1e40af' },
+          { id: 'holiday', name: '國定假日', color: '#ec4899', bgColor: '#fce7f3', textColor: '#9d174d' }
+        ]);
+
+        // O(1) Category Lookup Hash Map
+        const categoryMap = computed(() => {
+          const map = {};
+          categories.value.forEach(c => { map[c.id] = c; });
+          return map;
+        });
+
+        const selectedCategoryIds = ref(categories.value.map(c => c.id));
+
+        async function saveEvent() {
+          syncStatus.value = 'syncing';
+          const newOrUpdatedEvt = JSON.parse(JSON.stringify(formEvent.value));
+          
+          if (!newOrUpdatedEvt.id) {
+            newOrUpdatedEvt.id = 'evt_' + Date.now();
+          }
+
+          const updateLocalState = () => {
+            const idx = events.value.findIndex(e => e.id === newOrUpdatedEvt.id);
+            if (idx !== -1) {
+              events.value[idx] = newOrUpdatedEvt;
+            } else {
+              events.value.push(newOrUpdatedEvt);
+            }
+          };
+
+          if (eventsColRef) {
+            try {
+              const docRef = doc(eventsColRef, newOrUpdatedEvt.id);
+              await setDoc(docRef, newOrUpdatedEvt);
+              syncStatus.value = 'synced';
+              updateLocalState();
+            } catch (err) {
+              console.error("Error saving event:", err);
+              syncStatus.value = 'error';
+              updateLocalState();
+            }
+          } else {
+            updateLocalState();
+            syncStatus.value = 'synced';
+          }
+          saveLocalEvents(events.value);
+          activeFormModal.value = false;
+        }
+
+        const filteredEvents = computed(() => {
+          const query = searchQuery.value.trim().toLowerCase();
+          const catSet = new Set(selectedCategoryIds.value);
+          const deptSet = new Set(selectedDepartments.value);
+
+          return events.value.filter(evt => {
+            if (!catSet.has(evt.categoryId) || !deptSet.has(evt.department)) {
+              return false;
+            }
+            if (!query) return true;
+            return (
+              evt.title.toLowerCase().includes(query) || 
+              (evt.description && evt.description.toLowerCase().includes(query)) ||
+              (evt.location && evt.location.toLowerCase().includes(query)) ||
+              evt.department.toLowerCase().includes(query)
+            );
+          }).sort((a, b) => a.startDate.localeCompare(b.startDate));
+        });
+
+        // Pre-indexed Date Hash Map for O(1) Month/Week Grid Performance
+        const eventsByDateMap = computed(() => {
+          const map = new Map();
+          const list = filteredEvents.value;
+
+          for (let i = 0; i < list.length; i++) {
+            const evt = list[i];
+            const start = evt.startDate;
+            const end = evt.endDate || start;
+
+            if (start === end) {
+              let arr = map.get(start);
+              if (!arr) { arr = []; map.set(start, arr); }
+              arr.push(evt);
+            } else {
+              let curr = new Date(start);
+              const endDateObj = new Date(end);
+              while (curr <= endDateObj) {
+                const dStr = formatDateStr(curr);
+                let arr = map.get(dStr);
+                if (!arr) { arr = []; map.set(dStr, arr); }
+                arr.push(evt);
+                curr.setDate(curr.getDate() + 1);
+              }
+            }
+          }
+          return map;
+        });
+
+        const syncStatusText = computed(() => {
+          if (syncStatus.value === 'synced') return '雲端同步中';
+          if (syncStatus.value === 'syncing') return '同步中...';
+          if (syncStatus.value === 'error') return '本機儲存 (無權限)';
+          return '本機模式';
+        });
+
+        const agendaSubtitleText = computed(() => {
+          if (agendaFilterMode.value === 'twoWeeks') {
+            return '聚焦日期：' + twoWeeksDateRangeText.value;
+          }
+          return '依學期日期排序，共 ' + filteredEvents.value.length + ' 項';
+        });
+
+        const currentPeriodTitle = computed(() => {
+          const y = currentDate.value.getFullYear();
+          const m = currentDate.value.getMonth() + 1;
+          const rocY = y - 1911;
+
+          if (currentView.value === 'month') {
+            return rocY + '年 ' + m + '月';
+          } else if (currentView.value === 'week') {
+            return y + '年 ' + m + '月 (第 ' + getWeekNumber(currentDate.value) + ' 週)';
+          } else if (currentView.value === 'day') {
+            return y + '年 ' + m + '月 ' + currentDate.value.getDate() + '日';
+          } else {
+            return '115學年預告';
+          }
+        });
+
+        const todayFormattedDisplay = computed(() => {
+          return formatFullDate(new Date());
+        });
+
+        const twoWeeksDateRangeText = computed(() => {
+          const now = new Date(currentDate.value);
+          const startOfWeek = new Date(now);
+          startOfWeek.setDate(now.getDate() - now.getDay());
+
+          const endOfNextWeek = new Date(startOfWeek);
+          endOfNextWeek.setDate(startOfWeek.getDate() + 13);
+
+          return formatDateStr(startOfWeek) + ' ~ ' + formatDateStr(endOfNextWeek);
+        });
+
+        const monthViewDays = computed(() => {
+          const year = currentDate.value.getFullYear();
+          const month = currentDate.value.getMonth();
+
+          const firstDayOfMonth = new Date(year, month, 1);
+          const lastDayOfMonth = new Date(year, month + 1, 0);
+
+          const days = [];
+          const startDayOfWeek = firstDayOfMonth.getDay();
+
+          const prevMonthLastDay = new Date(year, month, 0).getDate();
+          for (let i = startDayOfWeek - 1; i >= 0; i--) {
+            const d = new Date(year, month - 1, prevMonthLastDay - i);
+            days.push(createDayObj(d, false));
+          }
+
+          for (let i = 1; i <= lastDayOfMonth.getDate(); i++) {
+            const d = new Date(year, month, i);
+            days.push(createDayObj(d, true));
+          }
+
+          const remainingCells = 42 - days.length;
+          for (let i = 1; i <= remainingCells; i++) {
+            const d = new Date(year, month + 1, i);
+            days.push(createDayObj(d, false));
+          }
+
+          return days;
+        });
+
+        function createDayObj(date, isCurrentMonth) {
+          const dateStr = formatDateStr(date);
+          const todayStr = formatDateStr(new Date());
+          const dayEvents = eventsByDateMap.value.get(dateStr) || [];
+
+          return {
+            date: date,
+            dateStr: dateStr,
+            dayNum: date.getDate(),
+            isCurrentMonth: isCurrentMonth,
+            isToday: dateStr === todayStr,
+            events: dayEvents
+          };
+        }
+
+        const weekViewDays = computed(() => {
+          const curr = new Date(currentDate.value);
+          const first = curr.getDate() - curr.getDay();
+          const days = [];
+          const weekNames = ['週日', '週一', '週二', '週三', '週四', '週五', '週六'];
+
+          for (let i = 0; i < 7; i++) {
+            const d = new Date(curr.setDate(first + i));
+            const dayObj = createDayObj(d, true);
+            dayObj.weekDayName = weekNames[i];
+            days.push(dayObj);
+          }
+          return days;
+        });
+
+        const dayViewEvents = computed(() => {
+          const dateStr = formatDateStr(selectedDate.value);
+          return eventsByDateMap.value.get(dateStr) || [];
+        });
+
+        const groupedAgendaEvents = computed(() => {
+          let sourceEvents = filteredEvents.value;
+
+          if (agendaFilterMode.value === 'twoWeeks') {
+            const baseDate = new Date(currentDate.value);
+            const startOfWeek = new Date(baseDate);
+            startOfWeek.setDate(baseDate.getDate() - baseDate.getDay());
+            startOfWeek.setHours(0, 0, 0, 0);
+
+            const endOfNextWeek = new Date(startOfWeek);
+            endOfNextWeek.setDate(startOfWeek.getDate() + 13);
+            endOfNextWeek.setHours(23, 59, 59, 999);
+
+            const startStr = formatDateStr(startOfWeek);
+            const endStr = formatDateStr(endOfNextWeek);
+
+            sourceEvents = sourceEvents.filter(evt => {
+              const evtEnd = evt.endDate || evt.startDate;
+              return evt.startDate <= endStr && evtEnd >= startStr;
+            });
+          }
+
+          const grouped = {};
+          sourceEvents.forEach(evt => {
+            const key = evt.startDate;
+            if (!grouped[key]) grouped[key] = [];
+            grouped[key].push(evt);
+          });
+          return grouped;
+        });
+
+        function goToToday() {
+          const now = new Date();
+          currentDate.value = now;
+          selectedDate.value = now;
+        }
+
+        function navigatePrev() {
+          if (currentView.value === 'month') {
+            currentDate.value = new Date(currentDate.value.getFullYear(), currentDate.value.getMonth() - 1, 1);
+          } else if (currentView.value === 'week') {
+            currentDate.value = new Date(currentDate.value.setDate(currentDate.value.getDate() - 7));
+          } else if (currentView.value === 'day') {
+            currentDate.value = new Date(currentDate.value.setDate(currentDate.value.getDate() - 1));
+            selectedDate.value = new Date(currentDate.value);
+          }
+        }
+
+        function navigateNext() {
+          if (currentView.value === 'month') {
+            currentDate.value = new Date(currentDate.value.getFullYear(), currentDate.value.getMonth() + 1, 1);
+          } else if (currentView.value === 'week') {
+            currentDate.value = new Date(currentDate.value.setDate(currentDate.value.getDate() + 7));
+          } else if (currentView.value === 'day') {
+            currentDate.value = new Date(currentDate.value.setDate(currentDate.value.getDate() + 1));
+            selectedDate.value = new Date(currentDate.value);
+          }
+        }
+
+        function handleDayClick(d) {
+          selectedDate.value = new Date(d);
+          pushHistoryState('dayModal');
+          activeDayModal.value = true;
+        }
+
+        function viewEventDetails(evt) {
+          selectedEvent.value = { ...evt };
+          pushHistoryState('detailModal');
+          activeDetailModal.value = true;
+        }
+
+        function viewEventDetailsFromDayModal(evt) {
+          activeDayModal.value = false;
+          viewEventDetails(evt);
+        }
+
+        function openAddModal(defaultDateStr = null) {
+          requireAdmin(() => {
+            isEditMode.value = false;
+            const targetDate = defaultDateStr || formatDateStr(selectedDate.value);
+            formEvent.value = {
+              id: 'evt_' + Date.now(),
+              title: '',
+              startDate: targetDate,
+              endDate: targetDate,
+              time: '',
+              department: '教導處',
+              categoryId: 'event',
+              location: '',
+              description: ''
+            };
+            pushHistoryState('formModal');
+            activeFormModal.value = true;
+          });
+        }
+
+        function openEditModal(evt) {
+          requireAdmin(() => {
+            isEditMode.value = true;
+            formEvent.value = { ...evt };
+            activeDetailModal.value = false;
+            pushHistoryState('editModal');
+            activeFormModal.value = true;
+          });
+        }
+
+        function confirmDeleteEvent(evt) {
+          requireAdmin(() => {
+            if (confirm(`確定要刪除「${evt.title}」這項活動嗎？`)) {
+              deleteEvent(evt);
+            }
+          });
+        }
+
+        async function deleteEvent(evt) {
+          if (!evt || !evt.id) return;
+          syncStatus.value = 'syncing';
+
+          events.value = events.value.filter(e => e.id !== evt.id);
+          saveLocalEvents(events.value);
+
+          if (eventsColRef) {
+            try {
+              const docRef = doc(eventsColRef, evt.id);
+              await deleteDoc(docRef);
+              syncStatus.value = 'synced';
+            } catch (err) {
+              console.error("Error deleting event from Cloud:", err);
+              syncStatus.value = 'error';
+            }
+          } else {
+            syncStatus.value = 'synced';
+          }
+
+          activeDetailModal.value = false;
+          activeFormModal.value = false;
+        }
+
+        const allCategoriesSelected = computed(() => selectedCategoryIds.value.length === categories.value.length);
+        
+        function toggleAllCategories() {
+          if (allCategoriesSelected.value) {
+            selectedCategoryIds.value = [];
+          } else {
+            selectedCategoryIds.value = categories.value.map(c => c.id);
+          }
+        }
+
+        function getCategoryCount(catId) {
+          return events.value.filter(e => e.categoryId === catId).length;
+        }
+
+        function getCategoryColor(catId) {
+          return categoryMap.value[catId]?.color || '#3b82f6';
+        }
+
+        function getCategoryBg(catId) {
+          return categoryMap.value[catId]?.bgColor || '#dbeafe';
+        }
+
+        function getCategoryTextColor(catId) {
+          return categoryMap.value[catId]?.textColor || '#1e40af';
+        }
+
+        function getCategoryName(catId) {
+          return categoryMap.value[catId]?.name || '一般活動';
+        }
+
+        function formatDateStr(date) {
+          const y = date.getFullYear();
+          const m = String(date.getMonth() + 1).padStart(2, '0');
+          const d = String(date.getDate()).padStart(2, '0');
+          return y + '-' + m + '-' + d;
+        }
+
+        function formatDateWithWeekName(dateStr) {
+          const parts = dateStr.split('-');
+          if (parts.length !== 3) return dateStr;
+          const d = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+          const weekNames = ['週日', '週一', '週二', '週三', '週四', '週五', '週六'];
+          return dateStr + ' (' + weekNames[d.getDay()] + ')';
+        }
+
+        function formatFullDate(date) {
+          const y = date.getFullYear();
+          const m = date.getMonth() + 1;
+          const d = date.getDate();
+          const rocY = y - 1911;
+          const weekNames = ['週日', '週一', '週二', '週三', '週四', '週五', '週六'];
+          return '民國 ' + rocY + ' 年 ' + m + ' 月 ' + d + ' 日 (' + weekNames[date.getDay()] + ')';
+        }
+
+        function getWeekNumber(d) {
+          const date = new Date(d.getTime());
+          date.setHours(0, 0, 0, 0);
+          date.setDate(date.getDate() + 3 - (date.getDay() + 6) % 7);
+          const week1 = new Date(date.getFullYear(), 0, 4);
+          return 1 + Math.round(((date.getTime() - week1.getTime()) / 86400000 - 3 + (week1.getDay() + 6) % 7) / 7);
+        }
+
         return {
-          currentDate, selectedDate, currentView, events, searchQuery, filteredEvents,
-          monthViewDays, weekViewDays, dayViewEvents, agendaEvents, groupedAgendaEvents, currentPeriodTitle,
-          navigatePrev, navigateNext, goToToday, handleDayClick, formatDateStr, formatFullDate,
-          categories, departments, getCategoryColor, getCategoryBg, getCategoryTextColor, getCategoryName,
-          toast, isAdmin, showAdminAuthModal, adminPassword, authError, toggleAdminAuth, loginAdmin,
-          showEventModal, selectedEvent, viewEventDetails, closeEventModal,
-          showAddModal, editingEvent, formData, openAddModal, openEditModal, closeAddModal, saveEvent, 
-          requestDeleteEvent, confirmDialog, closeConfirm, executeConfirm
+          currentView,
+          currentDate,
+          selectedDate,
+          sidebarOpen,
+          searchQuery,
+          agendaFilterMode,
+          syncStatus,
+          syncStatusText,
+          agendaSubtitleText,
+          currentUserId,
+          isAdmin,
+          adminPasswordModal,
+          inputPassword,
+          passwordError,
+          verifyPassword,
+          toggleAdminAuth,
+          resetToDefaultData,
+          activeFirebaseModal,
+          firebaseModalError,
+          rawConfigInput,
+          customFirebaseConfig,
+          openFirebaseModal,
+          parseJsonConfig,
+          saveFirebaseConfig,
+          clearFirebaseConfig,
+          activeFormModal,
+          activeDayModal,
+          isEditMode,
+          selectedEvent,
+          formEvent,
+          departments,
+          selectedDepartments,
+          categories,
+          selectedCategoryIds,
+          events,
+          filteredEvents,
+          currentPeriodTitle,
+          todayFormattedDisplay,
+          twoWeeksDateRangeText,
+          monthViewDays,
+          weekViewDays,
+          dayViewEvents,
+          groupedAgendaEvents,
+          goToToday,
+          navigatePrev,
+          navigateNext,
+          handleDayClick,
+          viewEventDetails,
+          viewEventDetailsFromDayModal,
+          openAddModal,
+          openEditModal,
+          confirmDeleteEvent,
+          deleteEvent,
+          saveEvent,
+          allCategoriesSelected,
+          toggleAllCategories,
+          getCategoryCount,
+          getCategoryColor,
+          getCategoryBg,
+          getCategoryTextColor,
+          getCategoryName,
+          formatFullDate,
+          formatDateWithWeekName,
+          switchView,
+          toggleSidebarMobile,
+          onSearchInput,
+          clearSearch,
+          jumpToEventDate,
+          jumpToDateAndDetail,
+          selectedDateStr: computed(() => formatDateStr(selectedDate.value))
         };
       }
-    });
-
-    app.mount('#app');
+    }).mount('#app');
   </script>
 </body>
 </html>
