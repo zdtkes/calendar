@@ -53,7 +53,7 @@
       padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
     }
     .pt-safe {
-      padding-top: max(0.75rem, env(safe-area-inset-top));
+      padding-top: max(0.5rem, env(safe-area-inset-top));
     }
     .custom-scrollbar::-webkit-scrollbar {
       width: 4px;
@@ -70,13 +70,13 @@
       display: grid;
       grid-template-columns: repeat(7, minmax(0, 1fr));
     }
-    /* Optimized hardware-accelerated drawer animation */
+    /* Hardware-accelerated drawer animation for mobile bottom sheets */
     @keyframes slideUp {
       from { transform: translate3d(0, 100%, 0); }
       to { transform: translate3d(0, 0, 0); }
     }
     .animate-slide-up {
-      animation: slideUp 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      animation: slideUp 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
       will-change: transform;
     }
   </style>
@@ -85,76 +85,67 @@
   <div id="app" class="h-full flex flex-col overflow-hidden" v-cloak>
     
     <!-- Top Header Navigation -->
-    <header class="bg-white border-b border-gray-200 px-3 sm:px-4 py-2 sm:py-2.5 flex items-center justify-between shadow-xs z-20 flex-shrink-0 pt-safe">
-      <div class="flex items-center space-x-2 sm:space-x-3">
-        <button @click="sidebarOpen = !sidebarOpen" class="p-2 -ml-1 text-gray-600 hover:bg-gray-100 active:bg-gray-200 rounded-lg transition-colors duration-150 flex items-center justify-center w-10 h-10" title="開啟選單與篩選">
-          <i class="fa-solid fa-bars text-lg"></i>
+    <header class="bg-white border-b border-gray-200 px-2.5 sm:px-4 py-2 flex items-center justify-between shadow-xs z-20 flex-shrink-0 pt-safe">
+      <div class="flex items-center space-x-1.5 sm:space-x-3">
+        <!-- Sidebar Toggle (Drawer Trigger for Desktop & Mobile) -->
+        <button @click="sidebarOpen = !sidebarOpen" class="p-2 -ml-1 text-gray-600 hover:bg-gray-100 active:bg-gray-200 rounded-lg transition-colors duration-150 flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10" title="開啟選單與篩選">
+          <i class="fa-solid fa-bars text-base sm:text-lg"></i>
         </button>
+        
+        <!-- School Logo & Title -->
         <div class="flex items-center space-x-2">
-          <div class="w-8 h-8 sm:w-9 sm:h-9 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold text-lg sm:text-xl shadow-xs">
+          <div class="w-7 h-7 sm:w-9 sm:h-9 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold text-sm sm:text-xl shadow-xs flex-shrink-0">
             土
           </div>
           <div>
-            <h1 class="text-sm sm:text-base font-bold text-gray-800 leading-tight truncate max-w-[140px] xs:max-w-[180px] sm:max-w-none">土庫國小行事曆</h1>
-            <p class="text-[10px] sm:text-xs text-gray-500 hidden xs:block">115 學年度上學期</p>
+            <h1 class="text-xs sm:text-base font-bold text-gray-800 leading-tight truncate max-w-[120px] xs:max-w-[170px] sm:max-w-none">土庫國小行事曆</h1>
+            <p class="text-[9px] sm:text-xs text-gray-500 hidden xs:block">115 學年度上學期</p>
           </div>
         </div>
       </div>
 
       <!-- Navigation & Date Title Controls -->
-      <div class="flex items-center space-x-1 sm:space-x-3">
-        <button @click="goToToday" class="px-2.5 py-1.5 border border-blue-500 bg-blue-50 text-blue-700 rounded-lg text-xs font-bold hover:bg-blue-100 active:bg-blue-200 transition-colors duration-150 shadow-2xs flex items-center space-x-1">
-          <i class="fa-solid fa-calendar-day text-xs"></i>
+      <div class="flex items-center space-x-1 sm:space-x-2">
+        <button @click="goToToday" class="px-2 py-1 sm:px-2.5 sm:py-1.5 border border-blue-500 bg-blue-50 text-blue-700 rounded-lg text-xs font-bold hover:bg-blue-100 active:bg-blue-200 transition-colors duration-150 shadow-2xs flex items-center space-x-1">
+          <i class="fa-solid fa-calendar-day text-[11px] sm:text-xs"></i>
           <span>今天</span>
         </button>
+
         <div class="flex items-center">
-          <button @click="navigatePrev" class="w-8 h-8 sm:w-9 sm:h-9 hover:bg-gray-100 active:bg-gray-200 rounded-full text-gray-600 transition-colors duration-150 flex items-center justify-center" title="上一期">
+          <button @click="navigatePrev" class="w-7 h-7 sm:w-9 sm:h-9 hover:bg-gray-100 active:bg-gray-200 rounded-full text-gray-600 transition-colors duration-150 flex items-center justify-center" title="上一期">
             <i class="fa-solid fa-chevron-left text-xs sm:text-sm"></i>
           </button>
-          <h2 class="text-xs sm:text-lg font-bold text-gray-800 min-w-[90px] sm:min-w-[130px] text-center truncate">
+          <h2 class="text-xs sm:text-lg font-bold text-gray-800 min-w-[75px] xs:min-w-[90px] sm:min-w-[130px] text-center truncate">
             {{ currentPeriodTitle }}
           </h2>
-          <button @click="navigateNext" class="w-8 h-8 sm:w-9 sm:h-9 hover:bg-gray-100 active:bg-gray-200 rounded-full text-gray-600 transition-colors duration-150 flex items-center justify-center" title="下一期">
+          <button @click="navigateNext" class="w-7 h-7 sm:w-9 sm:h-9 hover:bg-gray-100 active:bg-gray-200 rounded-full text-gray-600 transition-colors duration-150 flex items-center justify-center" title="下一期">
             <i class="fa-solid fa-chevron-right text-xs sm:text-sm"></i>
           </button>
         </div>
       </div>
 
-      <div class="flex items-center space-x-1.5 sm:space-x-3">
+      <!-- Right Header Tools -->
+      <div class="flex items-center space-x-1 sm:space-x-2">
         <!-- Search Input (Desktop) -->
-        <div class="relative hidden md:block w-48 lg:w-60">
-          <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+        <div class="relative hidden md:block w-40 lg:w-56">
+          <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs"></i>
           <input type="text" v-model="searchQuery" @input="onSearchInput" placeholder="搜尋全學期活動..."
-                 class="w-full pl-9 pr-7 py-1.5 bg-gray-100 border border-transparent rounded-lg text-sm focus:bg-white focus:border-blue-500 focus:outline-none transition-colors duration-150">
+                 class="w-full pl-8 pr-7 py-1 bg-gray-100 border border-transparent rounded-lg text-xs focus:bg-white focus:border-blue-500 focus:outline-none transition-colors duration-150">
           <button v-if="searchQuery" @click="clearSearch" class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-1">
             <i class="fa-solid fa-xmark text-xs"></i>
           </button>
         </div>
-
-        <!-- Cloud Sync Badge (Desktop/Tablet) -->
-        <button @click="openFirebaseModal" 
-                class="hidden lg:flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 hover:bg-blue-50 border border-gray-200 transition-colors duration-150 cursor-pointer"
-                title="查看/更換 Firebase 金鑰">
-          <span class="w-2 h-2 rounded-full" :class="{
-            'bg-green-500 animate-pulse': syncStatus === 'synced',
-            'bg-amber-500 animate-spin': syncStatus === 'syncing',
-            'bg-blue-500': syncStatus === 'offline',
-            'bg-red-500': syncStatus === 'error'
-          }"></span>
-          <span class="text-gray-600 font-semibold">{{ syncStatusText }}</span>
-          <i class="fa-solid fa-gear text-gray-400 hover:text-blue-600 text-xs ml-1"></i>
-        </button>
 
         <!-- View Switcher (Desktop) -->
         <div class="hidden sm:flex bg-gray-100 p-1 rounded-lg border border-gray-200 text-xs font-medium">
           <button @click="switchView('month')" :class="{'bg-white shadow-2xs text-blue-600 font-bold': currentView === 'month', 'text-gray-600 hover:text-gray-900': currentView !== 'month'}" class="px-2.5 py-1 rounded-md transition-colors duration-150">月曆</button>
           <button @click="switchView('week')" :class="{'bg-white shadow-2xs text-blue-600 font-bold': currentView === 'week', 'text-gray-600 hover:text-gray-900': currentView !== 'week'}" class="px-2.5 py-1 rounded-md transition-colors duration-150">週視圖</button>
           <button @click="switchView('day')" :class="{'bg-white shadow-2xs text-blue-600 font-bold': currentView === 'day', 'text-gray-600 hover:text-gray-900': currentView !== 'day'}" class="px-2.5 py-1 rounded-md transition-colors duration-150">日檢視</button>
-          <button @click="switchView('agenda')" :class="{'bg-white shadow-2xs text-blue-600 font-bold': currentView === 'agenda', 'text-gray-600 hover:text-gray-900': currentView !== 'agenda'}" class="px-2.5 py-1 rounded-md transition-colors duration-150">列表預告</button>
+          <button @click="switchView('agenda')" :class="{'bg-white shadow-2xs text-blue-600 font-bold': currentView === 'agenda', 'text-gray-600 hover:text-gray-900': currentView !== 'agenda'}" class="px-2.5 py-1 rounded-md transition-colors duration-150">預告</button>
         </div>
 
         <!-- Admin Auth Button -->
-        <button @click="toggleAdminAuth" :class="isAdmin ? 'bg-amber-100 text-amber-800 border-amber-300' : 'bg-gray-100 text-gray-600 border-gray-300 hover:bg-gray-200'" class="flex items-center space-x-1 px-2.5 py-1.5 border rounded-lg text-xs font-medium transition-colors duration-150">
+        <button @click="toggleAdminAuth" :class="isAdmin ? 'bg-amber-100 text-amber-800 border-amber-300' : 'bg-gray-100 text-gray-600 border-gray-300 hover:bg-gray-200'" class="flex items-center space-x-1 px-2 py-1.5 sm:px-2.5 sm:py-1.5 border rounded-lg text-xs font-medium transition-colors duration-150">
           <i class="fa-solid" :class="isAdmin ? 'fa-lock-open text-amber-600' : 'fa-lock'"></i>
           <span class="hidden md:inline">{{ isAdmin ? '管理員已驗證' : '管理登入' }}</span>
         </button>
@@ -168,7 +159,7 @@
     </header>
 
     <!-- Global Search Banner Alert -->
-    <div v-if="searchQuery" class="bg-amber-50 border-b border-amber-200 px-3 sm:px-4 py-2 flex items-center justify-between text-xs text-amber-900 z-10">
+    <div v-if="searchQuery" class="bg-amber-50 border-b border-amber-200 px-3 sm:px-4 py-1.5 flex items-center justify-between text-xs text-amber-900 z-10">
       <div class="flex items-center space-x-1.5 truncate">
         <i class="fa-solid fa-magnifying-glass text-amber-600 flex-shrink-0"></i>
         <span class="truncate">搜尋「<strong>{{ searchQuery }}</strong>」結果：共 <strong>{{ filteredEvents.length }}</strong> 項</span>
@@ -179,14 +170,16 @@
     </div>
 
     <!-- Main Content Body -->
-    <div class="flex flex-1 overflow-hidden relative pb-16 sm:pb-0">
+    <div class="flex flex-1 overflow-hidden relative pb-14 sm:pb-0">
       
-      <!-- Sidebar / Left Drawer Panel -->
-      <aside :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'"
-             class="fixed lg:static inset-y-0 left-0 z-40 w-72 xs:w-80 lg:w-72 bg-white border-r border-gray-200 flex flex-col transition-transform duration-200 ease-out shadow-xl lg:shadow-none flex-shrink-0 transform-gpu">
+      <!-- Drawer Sidebar Panel (Hidden by default on all screens, overlay on demand) -->
+      <aside :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'"
+             class="fixed inset-y-0 left-0 z-40 w-72 xs:w-80 bg-white border-r border-gray-200 flex flex-col transition-transform duration-200 ease-out shadow-2xl flex-shrink-0 transform-gpu">
         
-        <div class="p-4 flex items-center justify-between border-b border-gray-100 lg:hidden">
-          <span class="font-bold text-gray-800 text-base"><i class="fa-solid fa-sliders text-blue-600 mr-2"></i>篩選與設定</span>
+        <div class="p-4 flex items-center justify-between border-b border-gray-100">
+          <span class="font-bold text-gray-800 text-base flex items-center">
+            <i class="fa-solid fa-sliders text-blue-600 mr-2"></i>篩選與設定
+          </span>
           <button @click="sidebarOpen = false" class="p-2 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors">
             <i class="fa-solid fa-xmark text-lg"></i>
           </button>
@@ -194,15 +187,15 @@
 
         <div class="p-4 flex flex-col space-y-5 overflow-y-auto custom-scrollbar flex-1 pb-20 sm:pb-4">
           
-          <!-- Mobile Search Input inside drawer -->
+          <!-- Search Input inside drawer (For Mobile) -->
           <div class="block md:hidden">
             <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">關鍵字搜尋</label>
             <div class="relative w-full">
-              <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+              <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs"></i>
               <input type="text" v-model="searchQuery" @input="onSearchInput" placeholder="搜尋全學期活動..."
-                     class="w-full pl-9 pr-8 py-2 bg-gray-100 border border-transparent rounded-lg text-sm focus:bg-white focus:border-blue-500 focus:outline-none">
+                     class="w-full pl-8 pr-8 py-2 bg-gray-100 border border-transparent rounded-lg text-xs focus:bg-white focus:border-blue-500 focus:outline-none">
               <button v-if="searchQuery" @click="clearSearch" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 p-1">
-                <i class="fa-solid fa-xmark text-sm"></i>
+                <i class="fa-solid fa-xmark text-xs"></i>
               </button>
             </div>
           </div>
@@ -281,16 +274,16 @@
         </div>
       </aside>
 
-      <!-- Overlay for Mobile Sidebar -->
-      <div v-if="sidebarOpen" @click="sidebarOpen = false" class="fixed inset-0 bg-gray-900/40 z-30 lg:hidden"></div>
+      <!-- Overlay for Drawer Sidebar -->
+      <div v-if="sidebarOpen" @click="sidebarOpen = false" class="fixed inset-0 bg-gray-900/40 z-30 transition-opacity"></div>
 
-      <!-- Right Main Workspace -->
-      <main class="flex-1 flex flex-col bg-white overflow-hidden">
+      <!-- Right Main Workspace (Full Width Main View) -->
+      <main class="flex-1 flex flex-col bg-white overflow-hidden w-full">
         
-        <!-- MONTH VIEW -->
+        <!-- MONTH VIEW (Primary View) -->
         <div v-if="currentView === 'month'" class="flex-1 flex flex-col h-full overflow-hidden">
           <!-- Weekday Headers -->
-          <div class="calendar-grid border-b border-gray-200 bg-gray-50 text-center text-[11px] sm:text-xs font-bold text-gray-500 py-1.5 sm:py-2">
+          <div class="calendar-grid border-b border-gray-200 bg-gray-100/80 text-center text-[11px] sm:text-xs font-bold text-gray-600 py-1.5 shadow-2xs">
             <span class="text-red-500">日</span>
             <span>一</span>
             <span>二</span>
@@ -305,8 +298,8 @@
             <div v-for="(day, idx) in monthViewDays" :key="idx"
                  @click="handleDayClick(day.date)"
                  :class="[
-                   'border-b border-r border-gray-200 p-0.5 sm:p-1 flex flex-col transition-colors duration-100 active:bg-blue-100/60 min-h-[60px] sm:min-h-[90px] group cursor-pointer relative select-none',
-                   !day.isCurrentMonth ? 'bg-gray-50/60 text-gray-400' : 'bg-white',
+                   'border-b border-r border-gray-200 p-0.5 sm:p-1.5 flex flex-col transition-colors duration-100 active:bg-blue-100/60 min-h-[56px] sm:min-h-[85px] group cursor-pointer relative select-none',
+                   !day.isCurrentMonth ? 'bg-gray-50/50 text-gray-400' : 'bg-white',
                    day.isToday ? 'bg-blue-50/80 ring-2 ring-blue-500 ring-inset z-10' : ''
                  ]">
               
@@ -325,14 +318,14 @@
                 </span>
               </div>
 
-              <!-- Mobile Event Display (Dots & Count Pills) -->
-              <div class="flex sm:hidden flex-col items-center justify-center flex-1 space-y-1">
+              <!-- Mobile Event Display (Colored Dots & Badge) -->
+              <div class="flex sm:hidden flex-col items-center justify-center flex-1 space-y-1 py-0.5">
                 <div v-if="day.events.length > 0" class="flex flex-wrap items-center justify-center gap-1 px-0.5 max-w-full">
                   <span v-for="evt in day.events.slice(0, 3)" :key="'m_'+evt.id"
-                        class="w-2 h-2 rounded-full flex-shrink-0"
+                        class="w-2 h-2 rounded-full flex-shrink-0 shadow-2xs"
                         :style="{ backgroundColor: getCategoryColor(evt.categoryId) }"></span>
                 </div>
-                <span v-if="day.events.length > 0" class="text-[9px] font-bold text-gray-600 bg-gray-100 px-1 rounded">
+                <span v-if="day.events.length > 0" class="text-[9px] font-bold text-gray-600 bg-gray-100 px-1 py-0.2 rounded">
                   {{ day.events.length }}項
                 </span>
               </div>
@@ -355,10 +348,9 @@
           </div>
         </div>
 
-        <!-- WEEK VIEW (Scrollable on Mobile) -->
+        <!-- WEEK VIEW -->
         <div v-else-if="currentView === 'week'" class="flex-1 flex flex-col overflow-x-auto overflow-y-auto custom-scrollbar bg-gray-50">
           <div class="min-w-[640px] sm:min-w-full flex-1 flex flex-col">
-            <!-- Week Headers -->
             <div class="grid grid-cols-7 border-b border-gray-200 bg-gray-50 sticky top-0 z-10 text-center py-2 font-medium text-xs text-gray-600">
               <div v-for="wDay in weekViewDays" :key="wDay.dateStr"
                    :class="{'text-blue-600 font-bold': wDay.isToday}" class="p-1">
@@ -369,7 +361,6 @@
               </div>
             </div>
 
-            <!-- Week Day Columns -->
             <div class="grid grid-cols-7 flex-1 min-h-[450px] divide-x divide-gray-200 bg-white">
               <div v-for="wDay in weekViewDays" :key="wDay.dateStr" 
                    @click="handleDayClick(wDay.date)"
@@ -424,7 +415,6 @@
                     <span v-if="evt.location"><i class="fa-solid fa-location-dot mr-1"></i>{{ evt.location }}</span>
                   </div>
                 </div>
-                <!-- Direct Edit & Delete buttons -->
                 <div class="flex items-center space-x-1 ml-2 flex-shrink-0" @click.stop>
                   <button @click.stop="openEditModal(evt)" class="p-2 text-xs text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors duration-150" title="編輯">
                     <i class="fa-solid fa-pen-to-square"></i>
@@ -442,7 +432,6 @@
         <div v-else-if="currentView === 'agenda'" class="flex-1 p-3 sm:p-6 overflow-y-auto custom-scrollbar bg-gray-50">
           <div class="max-w-4xl mx-auto space-y-4 sm:space-y-6">
             
-            <!-- Agenda Mode Toggle Banner -->
             <div class="bg-white rounded-xl p-3 sm:p-4 shadow-2xs border border-gray-200 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
               <div>
                 <h3 class="text-sm sm:text-lg font-bold text-gray-800 flex items-center">
@@ -454,7 +443,6 @@
                 </p>
               </div>
 
-              <!-- Scope Buttons -->
               <div class="flex bg-gray-100 p-1 rounded-lg text-xs font-semibold self-stretch">
                 <button @click="agendaFilterMode = 'twoWeeks'" 
                         :class="agendaFilterMode === 'twoWeeks' ? 'bg-blue-600 text-white shadow-2xs' : 'text-gray-600 hover:text-gray-900'"
@@ -481,7 +469,6 @@
 
             <div v-else class="space-y-3 sm:space-y-4">
               <div v-for="(group, dateKey) in groupedAgendaEvents" :key="dateKey" class="bg-white rounded-xl shadow-2xs border border-gray-200 overflow-hidden">
-                <!-- Date Header -->
                 <div class="bg-gray-100/90 px-3 sm:px-4 py-2 border-b border-gray-200 flex items-center justify-between">
                   <button @click="jumpToDateAndDetail(dateKey)" class="font-bold text-xs sm:text-sm text-blue-700 hover:underline flex items-center truncate">
                     <i class="fa-regular fa-calendar-days mr-1.5 text-blue-600 flex-shrink-0"></i>
@@ -490,7 +477,6 @@
                   <span class="text-[10px] sm:text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full font-semibold font-mono flex-shrink-0 ml-1">{{ group.length }} 項</span>
                 </div>
 
-                <!-- Events List -->
                 <div class="divide-y divide-gray-100">
                   <div v-for="evt in group" :key="evt.id"
                        @click="jumpToEventDate(evt)"
@@ -518,36 +504,37 @@
     </div>
 
     <!-- MOBILE BOTTOM NAVIGATION BAR -->
-    <nav class="fixed bottom-0 inset-x-0 bg-white border-t border-gray-200 flex items-center justify-around py-1.5 z-30 md:hidden shadow-lg pb-safe">
-      <button @click="switchView('month')" :class="currentView === 'month' ? 'text-blue-600 font-bold' : 'text-gray-500'" class="flex flex-col items-center justify-center w-16 py-1 text-[10px] active:scale-95 transition-transform duration-100">
+    <nav class="fixed bottom-0 inset-x-0 bg-white border-t border-gray-200 flex items-center justify-around py-1 z-30 sm:hidden shadow-lg pb-safe">
+      <button @click="switchView('month')" :class="currentView === 'month' ? 'text-blue-600 font-bold' : 'text-gray-500'" class="flex flex-col items-center justify-center w-14 py-1 text-[10px] active:scale-95 transition-transform duration-100">
         <i class="fa-regular fa-calendar-days text-base mb-0.5"></i>
         <span>月曆</span>
       </button>
 
-      <button @click="switchView('week')" :class="currentView === 'week' ? 'text-blue-600 font-bold' : 'text-gray-500'" class="flex flex-col items-center justify-center w-16 py-1 text-[10px] active:scale-95 transition-transform duration-100">
+      <button @click="switchView('week')" :class="currentView === 'week' ? 'text-blue-600 font-bold' : 'text-gray-500'" class="flex flex-col items-center justify-center w-14 py-1 text-[10px] active:scale-95 transition-transform duration-100">
         <i class="fa-solid fa-calendar-week text-base mb-0.5"></i>
         <span>週視圖</span>
       </button>
 
-      <button @click="openAddModal()" class="flex flex-col items-center justify-center w-14 active:scale-90 transition-transform duration-100">
-        <div class="w-10 h-10 bg-blue-600 text-white rounded-full flex items-center justify-center shadow-md -mt-4">
-          <i class="fa-solid fa-plus text-base"></i>
+      <!-- Center Floating Plus Action Button -->
+      <button @click="openAddModal()" class="flex flex-col items-center justify-center w-12 active:scale-90 transition-transform duration-100">
+        <div class="w-9 h-9 bg-blue-600 text-white rounded-full flex items-center justify-center shadow-md -mt-3">
+          <i class="fa-solid fa-plus text-sm"></i>
         </div>
-        <span class="text-[10px] text-blue-600 font-bold mt-0.5">新增</span>
+        <span class="text-[9px] text-blue-600 font-bold mt-0.5">新增</span>
       </button>
 
-      <button @click="switchView('agenda')" :class="currentView === 'agenda' ? 'text-blue-600 font-bold' : 'text-gray-500'" class="flex flex-col items-center justify-center w-16 py-1 text-[10px] active:scale-95 transition-transform duration-100">
+      <button @click="switchView('agenda')" :class="currentView === 'agenda' ? 'text-blue-600 font-bold' : 'text-gray-500'" class="flex flex-col items-center justify-center w-14 py-1 text-[10px] active:scale-95 transition-transform duration-100">
         <i class="fa-solid fa-list-ul text-base mb-0.5"></i>
         <span>預告</span>
       </button>
 
-      <button @click="toggleSidebarMobile()" :class="sidebarOpen ? 'text-blue-600 font-bold' : 'text-gray-500'" class="flex flex-col items-center justify-center w-16 py-1 text-[10px] active:scale-95 transition-transform duration-100">
+      <button @click="toggleSidebarMobile()" :class="sidebarOpen ? 'text-blue-600 font-bold' : 'text-gray-500'" class="flex flex-col items-center justify-center w-14 py-1 text-[10px] active:scale-95 transition-transform duration-100">
         <i class="fa-solid fa-sliders text-base mb-0.5"></i>
         <span>篩選</span>
       </button>
     </nav>
 
-    <!-- DAY SUMMARY MODAL -->
+    <!-- DAY SUMMARY MODAL (Mobile Bottom Sheet / Card) -->
     <div v-if="activeDayModal" class="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-gray-900/50">
       <div class="bg-white rounded-t-2xl sm:rounded-xl shadow-2xl w-full max-w-lg overflow-hidden border border-gray-100 flex flex-col max-h-[85vh] animate-slide-up sm:animate-none">
         
@@ -588,7 +575,6 @@
                   </div>
                 </div>
               </div>
-              <!-- Quick Action Icons -->
               <div class="flex items-center space-x-1 flex-shrink-0" @click.stop>
                 <button @click.stop="openEditModal(evt); activeDayModal = false;" class="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-100 rounded transition-colors duration-150" title="編輯">
                   <i class="fa-solid fa-pen-to-square text-xs"></i>
@@ -705,11 +691,10 @@
         </div>
         <p class="text-xs text-gray-600">請輸入管理密碼以取得新增、修改與刪除權限：</p>
         <div>
-          <input type="password" v-model="inputPassword" @keyup.enter="verifyPassword" placeholder="請輸入密碼 (預設: 2140)"
+          <input type="password" v-model="inputPassword" @keyup.enter="verifyPassword" placeholder="請輸入密碼"
                  class="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                  :class="passwordError ? 'border-red-500 bg-red-50' : 'border-gray-300'">
           <p v-if="passwordError" class="text-xs text-red-500 mt-1 font-semibold">{{ passwordError }}</p>
-          <p class="text-[11px] text-gray-400 mt-1">預設密碼：<code class="bg-gray-100 px-1 py-0.5 rounded text-gray-700 font-mono">2140</code></p>
         </div>
         <div class="flex justify-end space-x-2 pt-2">
           <button @click="adminPasswordModal = false" class="px-3.5 py-1.5 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg text-xs font-medium">取消</button>
@@ -875,7 +860,7 @@
 
     const { createApp, ref, computed, onMounted } = Vue;
 
-    // Default Firebase Config for tuku-es-calendar
+    // Default Firebase Config
     const DEFAULT_FIREBASE_CONFIG = {
       apiKey: "AIzaSyDRNURwHBCvq-M7R1h4l8hzkqLB8ca7IOI",
       authDomain: "tuku-es-calendar.firebaseapp.com",
@@ -890,7 +875,7 @@
         const currentView = ref('month');
         const currentDate = ref(new Date()); 
         const selectedDate = ref(new Date());
-        const sidebarOpen = ref(false);
+        const sidebarOpen = ref(false); // Sidebar hidden by default
         const searchQuery = ref('');
 
         const agendaFilterMode = ref('twoWeeks');
@@ -956,7 +941,7 @@
         };
 
         const verifyPassword = () => {
-          if (inputPassword.value === '2140') {
+          if (inputPassword.value === 'admin') {
             isAdmin.value = true;
             adminPasswordModal.value = false;
             passwordError.value = '';
@@ -1269,7 +1254,6 @@
           { id: 'holiday', name: '國定假日', color: '#ec4899', bgColor: '#fce7f3', textColor: '#9d174d' }
         ]);
 
-        // O(1) Category Lookup Hash Map
         const categoryMap = computed(() => {
           const map = {};
           categories.value.forEach(c => { map[c.id] = c; });
@@ -1333,7 +1317,6 @@
           }).sort((a, b) => a.startDate.localeCompare(b.startDate));
         });
 
-        // Pre-indexed Date Hash Map for O(1) Month/Week Grid Performance
         const eventsByDateMap = computed(() => {
           const map = new Map();
           const list = filteredEvents.value;
